@@ -3,6 +3,17 @@ import { statisticsApi } from '../services/api'
 import { StatisticsResponse } from '../types'
 import './StatisticsPage.css'
 
+const RECIPIENT_COLORS = [
+  '#8b6914',
+  '#c8942e',
+  '#5a8f5a',
+  '#6b8cae',
+  '#a08060',
+  '#c25a3a',
+  '#9b7bb8',
+  '#5e9e9c',
+]
+
 function StatisticsPage() {
   const [stats, setStats] = useState<StatisticsResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -61,18 +72,14 @@ function StatisticsPage() {
 
   const maxCategoryCount = Math.max(...stats.category_distribution.map((c) => c.count), 1)
   const maxMemberCount = Math.max(...stats.top_related_family_members.map((m) => m.count), 1)
+  const maxRecipientCount = Math.max(
+    ...stats.pending_recipient_distribution.map((r) => r.count),
+    1
+  )
 
   const pendingCount = stats.pending_intentions_count
   const confirmedCount = stats.confirmed_inheritance_count
   const totalItems = stats.total_items
-
-  const statusData = [
-    { status: '已确认传承', count: confirmedCount, color: '#5a8f5a' },
-    { status: '待确认意向', count: pendingCount, color: '#c8942e' },
-    { status: '未安排', count: Math.max(0, totalItems - confirmedCount - pendingCount), color: '#a08060' },
-  ]
-
-  const totalPending = statusData.reduce((sum, item) => sum + item.count, 0)
 
   return (
     <div className="statistics-page">
@@ -152,37 +159,46 @@ function StatisticsPage() {
         </div>
 
         <div className="chart-card full-width">
-          <h3 className="chart-title">📋 传承状态分布</h3>
-          <div className="pending-chart">
-            <div className="pending-bars">
-              {statusData.map((item) => (
-                <div key={item.status} className="pending-bar-item">
-                  <div
-                    className="pending-bar"
-                    style={{
-                      height: `${totalPending > 0 ? (item.count / totalPending) * 100 * 2 : 0}%`,
-                      backgroundColor: item.color,
-                    }}
-                  ></div>
-                  <span className="pending-value">{item.count}</span>
-                  <span className="pending-label">{item.status}</span>
-                </div>
-              ))}
+          <h3 className="chart-title">📋 待确认去向分布</h3>
+          {stats.pending_recipient_distribution.length > 0 ? (
+            <div className="recipient-chart">
+              <div className="recipient-bars">
+                {stats.pending_recipient_distribution.map((item, index) => (
+                  <div key={item.recipient} className="recipient-bar-item">
+                    <div
+                      className="recipient-bar"
+                      style={{
+                        height: `${(item.count / maxRecipientCount) * 100 * 2.5}%`,
+                        backgroundColor:
+                          RECIPIENT_COLORS[index % RECIPIENT_COLORS.length],
+                      }}
+                    ></div>
+                    <span className="recipient-value">{item.count}</span>
+                    <span className="recipient-label">{item.recipient}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="recipient-legend">
+                {stats.pending_recipient_distribution.map((item, index) => (
+                  <div key={item.recipient} className="legend-item">
+                    <span
+                      className="legend-dot"
+                      style={{
+                        backgroundColor: RECIPIENT_COLORS[index % RECIPIENT_COLORS.length],
+                      }}
+                    ></span>
+                    <span className="legend-text">
+                      {item.recipient}（{item.count}件）
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="pending-legend">
-              {statusData.map((item) => (
-                <div key={item.status} className="legend-item">
-                  <span
-                    className="legend-dot"
-                    style={{ backgroundColor: item.color }}
-                  ></span>
-                  <span className="legend-text">
-                    {item.status} ({item.count}件)
-                  </span>
-                </div>
-              ))}
+          ) : (
+            <div className="empty-state">
+              <p>暂无待确认的传承意向</p>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

@@ -54,10 +54,29 @@ def get_statistics(db: Session = Depends(get_db)):
         models.InheritanceIntention.is_final == False
     ).count()
     
+    pending_recipient_query = db.query(
+        models.InheritanceIntention.proposed_recipient,
+        func.count(models.InheritanceIntention.id).label('count')
+    ).filter(
+        models.InheritanceIntention.is_final == False,
+        models.InheritanceIntention.proposed_recipient.isnot(None)
+    ).group_by(
+        models.InheritanceIntention.proposed_recipient
+    ).order_by(desc('count')).all()
+    
+    pending_recipient_distribution = []
+    for recipient, count in pending_recipient_query:
+        if recipient:
+            pending_recipient_distribution.append(schemas.PendingRecipientDistributionItem(
+                recipient=recipient,
+                count=count
+            ))
+    
     return schemas.StatisticsResponse(
         confirmed_inheritance_count=confirmed_count,
         category_distribution=category_distribution,
         top_related_family_members=top_members,
         pending_intentions_count=pending_intentions,
-        total_items=total_items
+        total_items=total_items,
+        pending_recipient_distribution=pending_recipient_distribution
     )

@@ -87,10 +87,16 @@ export interface TopRelatedFamilyMember {
   count: number;
 }
 
+export interface PendingRecipientDistributionItem {
+  recipient: string;
+  count: number;
+}
+
 export interface StatisticsResponse {
   confirmed_inheritance_count: number;
   category_distribution: CategoryDistributionItem[];
   top_related_family_members: TopRelatedFamilyMember[];
   pending_intentions_count: number;
   total_items: number;
+  pending_recipient_distribution: PendingRecipientDistributionItem[];
 }

@@ -40,6 +40,15 @@
   opacity: 0.5;
 }
 
+.emoji-placeholder {
+  background: linear-gradient(135deg, #fff9f0 0%, #f5e6d3 100%);
+}
+
+.placeholder-emoji {
+  font-size: 72px;
+  line-height: 1;
+}
+
 .condition-badge {
   position: absolute;
   top: 12px;

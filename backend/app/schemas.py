@@ -197,9 +197,15 @@ class TopRelatedFamilyMember(BaseModel):
     count: int
 
 
+class PendingRecipientDistributionItem(BaseModel):
+    recipient: str
+    count: int
+
+
 class StatisticsResponse(BaseModel):
     confirmed_inheritance_count: int
     category_distribution: List[CategoryDistributionItem]
     top_related_family_members: List[TopRelatedFamilyMember]
     pending_intentions_count: int
     total_items: int
+    pending_recipient_distribution: List[PendingRecipientDistributionItem]
