@@ -1,0 +1,296 @@
+.statistics-page {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #5a4a3a;
+  margin-bottom: 4px;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: #a08060;
+}
+
+.stats-overview {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 28px;
+}
+
+.overview-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  background-color: #fff9f0;
+  border-radius: 12px;
+  border: 1px solid #f0e6d6;
+}
+
+.overview-card.main {
+  background: linear-gradient(135deg, #fff9f0 0%, #f5e6d3 100%);
+  border-color: #e8d5bc;
+}
+
+.overview-icon {
+  font-size: 36px;
+}
+
+.overview-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.overview-number {
+  font-size: 32px;
+  font-weight: 700;
+  color: #8b6914;
+}
+
+.overview-number.confirmed {
+  color: #5a8f5a;
+}
+
+.overview-number.pending {
+  color: #c8942e;
+}
+
+.overview-label {
+  font-size: 13px;
+  color: #a08060;
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.chart-card {
+  background-color: #fff9f0;
+  border-radius: 12px;
+  padding: 24px;
+  border: 1px solid #f0e6d6;
+}
+
+.chart-card.full-width {
+  grid-column: 1 / -1;
+}
+
+.chart-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #5a4a3a;
+  margin-bottom: 20px;
+}
+
+.category-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.category-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.category-name {
+  font-size: 14px;
+  color: #6b5344;
+  min-width: 50px;
+}
+
+.category-bar-container {
+  flex: 1;
+  height: 24px;
+  background-color: #faf6f0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.category-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #d4a853 0%, #8b6914 100%);
+  border-radius: 12px;
+  transition: width 0.3s ease;
+}
+
+.category-count {
+  font-size: 13px;
+  color: #a08060;
+  min-width: 45px;
+  text-align: right;
+}
+
+.member-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.member-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.member-rank {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f5e6d3;
+  color: #8b6914;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 50%;
+}
+
+.member-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #d4a853 0%, #8b6914 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.member-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 80px;
+}
+
+.member-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #5a4a3a;
+}
+
+.member-relation {
+  font-size: 12px;
+  color: #a08060;
+}
+
+.member-bar-container {
+  flex: 1;
+  height: 20px;
+  background-color: #faf6f0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.member-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #8fbc8f 0%, #5a8f5a 100%);
+  border-radius: 10px;
+  transition: width 0.3s ease;
+}
+
+.member-count {
+  font-size: 13px;
+  color: #a08060;
+  min-width: 40px;
+  text-align: right;
+}
+
+.pending-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.pending-bars {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 40px;
+  height: 200px;
+  padding: 20px;
+}
+
+.pending-bar-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.pending-bar {
+  width: 60px;
+  border-radius: 8px 8px 0 0;
+  min-height: 20px;
+  transition: height 0.3s ease;
+}
+
+.pending-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #5a4a3a;
+}
+
+.pending-label {
+  font-size: 13px;
+  color: #7a6a5a;
+}
+
+.pending-legend {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  padding-top: 16px;
+  border-top: 1px dashed #e8d5bc;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.legend-text {
+  font-size: 13px;
+  color: #7a6a5a;
+}
+
+@media (max-width: 800px) {
+  .stats-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pending-bars {
+    gap: 20px;
+  }
+
+  .pending-bar {
+    width: 45px;
+  }
+}
