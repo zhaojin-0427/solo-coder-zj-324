@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { statisticsApi } from '../services/api'
-import { StatisticsResponse, ATTACHMENT_TYPE_META } from '../types'
+import { StatisticsResponse, ATTACHMENT_TYPE_META, INSPECTION_RISK_META } from '../types'
 import './StatisticsPage.css'
 
 const RECIPIENT_COLORS = [
@@ -89,6 +89,14 @@ function StatisticsPage() {
     ...stats.top_attachment_contributors.map((c) => c.count),
     1
   )
+  const maxRiskCount = Math.max(
+    ...stats.inspection_risk_type_distribution.map((r) => r.count),
+    1
+  )
+  const maxHighRiskCount = Math.max(
+    ...stats.high_risk_items.map((i) => i.risk_count),
+    1
+  )
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return ''
@@ -161,6 +169,41 @@ function StatisticsPage() {
               {stats.items_without_image_attachments_count}
             </span>
             <span className="overview-label">缺少影像资料</span>
+          </div>
+        </div>
+        <div className="overview-card">
+          <div className="overview-icon">⏰</div>
+          <div className="overview-info">
+            <span className="overview-number pending">{stats.pending_review_count}</span>
+            <span className="overview-label">待复查旧物</span>
+          </div>
+        </div>
+        <div className="overview-card">
+          <div className="overview-icon">⚠️</div>
+          <div className="overview-info">
+            <span className="overview-number no-discussion">{stats.at_risk_count}</span>
+            <span className="overview-label">存在风险</span>
+          </div>
+        </div>
+        <div className="overview-card">
+          <div className="overview-icon">📉</div>
+          <div className="overview-info">
+            <span className="overview-number">{stats.deteriorated_count}</span>
+            <span className="overview-label">状态变差</span>
+          </div>
+        </div>
+        <div className="overview-card">
+          <div className="overview-icon">✅</div>
+          <div className="overview-info">
+            <span className="overview-number confirmed">{stats.normal_status_count}</span>
+            <span className="overview-label">状态正常</span>
+          </div>
+        </div>
+        <div className="overview-card">
+          <div className="overview-icon">📋</div>
+          <div className="overview-info">
+            <span className="overview-number">{stats.recent_30days_inspection_count}</span>
+            <span className="overview-label">近30天盘点次数</span>
           </div>
         </div>
       </div>
@@ -358,6 +401,114 @@ function StatisticsPage() {
           ) : (
             <div className="empty-state small-padding">
               <p>暂无资料上传记录</p>
+            </div>
+          )}
+        </div>
+
+        <div className="chart-card">
+          <h3 className="chart-title">⚠️ 风险类型分布</h3>
+          {stats.inspection_risk_type_distribution.length > 0 ? (
+            <div className="category-chart">
+              {stats.inspection_risk_type_distribution.map((item) => {
+                const meta = INSPECTION_RISK_META[item.risk_type] || {
+                  icon: '⚠️',
+                  color: '#c25a3a',
+                }
+                const totalRisks = stats.inspection_risk_type_distribution.reduce(
+                  (s, r) => s + r.count,
+                  0
+                )
+                const pct = totalRisks > 0 ? Math.round((item.count / totalRisks) * 100) : 0
+                return (
+                  <div key={item.risk_type} className="category-row">
+                    <span className="category-name">
+                      {meta.icon} {item.risk_type}
+                    </span>
+                    <div className="category-bar-container">
+                      <div
+                        className="category-bar"
+                        style={{
+                          width: `${(item.count / maxRiskCount) * 100}%`,
+                          backgroundColor: meta.color,
+                        }}
+                      ></div>
+                    </div>
+                    <span className="category-count">
+                      {item.count} · {pct}%
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="empty-state small-padding">
+              <p>暂无风险数据</p>
+            </div>
+          )}
+        </div>
+
+        <div className="chart-card full-width">
+          <h3 className="chart-title">🔥 高风险旧物排行 TOP 5</h3>
+          {stats.high_risk_items.length > 0 ? (
+            <div className="active-chart">
+              {stats.high_risk_items.map((item, index) => (
+                <div key={item.id} className="active-row">
+                  <span
+                    className="active-rank"
+                    style={{
+                      backgroundColor:
+                        index === 0
+                          ? '#c25a3a'
+                          : index < 3
+                          ? '#e07b3a'
+                          : '#c8942e',
+                      color: '#fff9f0',
+                    }}
+                  >
+                    {index + 1}
+                  </span>
+                  <Link to={`/items/${item.id}`} className="active-name">
+                    📦 {item.name}
+                    {item.is_overdue && (
+                      <span className="high-risk-badge overdue">逾期</span>
+                    )}
+                  </Link>
+                  <div className="active-bar-container">
+                    <div
+                      className="active-bar"
+                      style={{
+                        width: `${(item.risk_count / maxHighRiskCount) * 100}%`,
+                        backgroundColor: '#c25a3a',
+                      }}
+                    ></div>
+                  </div>
+                  <span className="active-count">{item.risk_count} 次</span>
+                  <div className="risk-tags-inline">
+                    {item.latest_risk_types.slice(0, 3).map((r) => {
+                      const meta = INSPECTION_RISK_META[r] || {
+                        icon: '⚠️',
+                        color: '#c25a3a',
+                      }
+                      return (
+                        <span
+                          key={r}
+                          className="risk-tag-mini"
+                          style={{
+                            backgroundColor: meta.color + '22',
+                            color: meta.color,
+                          }}
+                        >
+                          {meta.icon} {r}
+                        </span>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state small-padding">
+              <p>暂无高风险旧物</p>
             </div>
           )}
         </div>

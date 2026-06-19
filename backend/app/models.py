@@ -61,6 +61,7 @@ class HeirloomItem(Base):
     intentions = relationship("InheritanceIntention", back_populates="item", cascade="all, delete-orphan")
     discussions = relationship("Discussion", back_populates="item", cascade="all, delete-orphan")
     attachments = relationship("ItemAttachment", back_populates="item", cascade="all, delete-orphan")
+    inspection_records = relationship("InspectionRecord", back_populates="item", cascade="all, delete-orphan")
 
 
 class StoryCard(Base):
@@ -159,3 +160,47 @@ class StoryCardAttachment(Base):
 
     story_card_id = Column(Integer, ForeignKey("story_cards.id"), primary_key=True)
     attachment_id = Column(Integer, ForeignKey("item_attachments.id"), primary_key=True)
+
+
+INSPECTION_RISK_HUMIDITY = "潮湿"
+INSPECTION_RISK_MOTH = "虫蛀"
+INSPECTION_RISK_SUNLIGHT = "阳光直射"
+INSPECTION_RISK_DAMAGE_SPREAD = "破损扩大"
+INSPECTION_RISK_MOLD = "发霉"
+INSPECTION_RISK_TEMPERATURE = "温度过高"
+INSPECTION_RISK_OTHER = "其他"
+
+INSPECTION_RISK_TYPES = [
+    INSPECTION_RISK_HUMIDITY,
+    INSPECTION_RISK_MOTH,
+    INSPECTION_RISK_SUNLIGHT,
+    INSPECTION_RISK_DAMAGE_SPREAD,
+    INSPECTION_RISK_MOLD,
+    INSPECTION_RISK_TEMPERATURE,
+    INSPECTION_RISK_OTHER,
+]
+
+INSPECTION_STATUS_NORMAL = "正常"
+INSPECTION_STATUS_DETERIORATED = "状态变差"
+INSPECTION_STATUS_RISK = "存在风险"
+INSPECTION_STATUS_OVERDUE = "逾期未复查"
+INSPECTION_STATUS_PENDING = "待复查"
+
+
+class InspectionRecord(Base):
+    __tablename__ = "inspection_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    item_id = Column(Integer, ForeignKey("heirloom_items.id"), nullable=False)
+    inspection_date = Column(String, nullable=False)
+    inspector = Column(String, nullable=False)
+    is_present = Column(Boolean, default=True, nullable=False)
+    condition_change = Column(String)
+    environmental_risks = Column(String)
+    handling_suggestions = Column(Text)
+    next_review_date = Column(String)
+    notes = Column(Text)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    item = relationship("HeirloomItem", back_populates="inspection_records")

@@ -61,3 +61,61 @@
   padding: 60px 20px;
   color: #a08060;
 }
+
+.filter-bar.secondary {
+  margin-bottom: 20px;
+  padding: 10px 14px;
+  background-color: #faf6f0;
+  border-radius: 10px;
+  align-items: center;
+}
+
+.filter-bar-label {
+  font-size: 13px;
+  color: #7a6a5a;
+  font-weight: 500;
+  margin-right: 4px;
+}
+
+.status-btn {
+  padding: 6px 16px;
+  border-radius: 16px;
+  background-color: #fff9f0;
+  border: 1px solid #e8d5bc;
+  color: #7a6a5a;
+  font-size: 13px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.status-btn:hover {
+  border-color: #8b6914;
+  color: #8b6914;
+}
+
+.status-btn.active {
+  background-color: #8b6914;
+  color: #fff9f0;
+  border-color: #8b6914;
+}
+
+.status-btn.active.risk {
+  background-color: #c8942e;
+  border-color: #c8942e;
+}
+
+.status-btn.active.overdue {
+  background-color: #c25a3a;
+  border-color: #c25a3a;
+}
+
+.status-btn.active.deteriorated {
+  background-color: #d4a030;
+  border-color: #d4a030;
+}
+
+.status-btn.active.normal {
+  background-color: #5a8f5a;
+  border-color: #5a8f5a;
+}

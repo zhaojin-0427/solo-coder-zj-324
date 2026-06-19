@@ -80,6 +80,26 @@
   color: #c25a3a;
 }
 
+.overview-number.overdue {
+  color: #c25a3a;
+}
+
+.overview-number.at-risk {
+  color: #c8942e;
+}
+
+.overview-number.deteriorated {
+  color: #d4a030;
+}
+
+.overview-number.normal-status {
+  color: #5a8f5a;
+}
+
+.overview-number.recent-inspection {
+  color: #6b8cae;
+}
+
 .overview-label {
   font-size: 12px;
   color: #a08060;
@@ -474,4 +494,208 @@
   .active-date {
     min-width: auto;
   }
+}
+
+.risk-tags-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.risk-tag-mini {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.risk-tag-mini.humidity {
+  background-color: rgba(107, 140, 174, 0.18);
+  color: #5a7a9a;
+}
+
+.risk-tag-mini.bugs {
+  background-color: rgba(139, 105, 20, 0.18);
+  color: #8b6914;
+}
+
+.risk-tag-mini.sunlight {
+  background-color: rgba(212, 168, 83, 0.22);
+  color: #a07a20;
+}
+
+.risk-tag-mini.damage {
+  background-color: rgba(194, 90, 58, 0.18);
+  color: #c25a3a;
+}
+
+.risk-tag-mini.mold {
+  background-color: rgba(90, 143, 90, 0.18);
+  color: #4a7a4a;
+}
+
+.risk-tag-mini.temperature {
+  background-color: rgba(200, 100, 100, 0.18);
+  color: #a04040;
+}
+
+.risk-tag-mini.other {
+  background-color: rgba(160, 128, 96, 0.18);
+  color: #7a6040;
+}
+
+.high-risk-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.high-risk-badge.overdue {
+  background-color: rgba(194, 90, 58, 0.12);
+  color: #c25a3a;
+}
+
+.high-risk-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.high-risk-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  background-color: #faf6f0;
+  border-radius: 10px;
+  transition: background-color 0.2s ease;
+}
+
+.high-risk-row:hover {
+  background-color: #f5f0e8;
+}
+
+.high-risk-rank {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #e0b050 0%, #c8942e 100%);
+  color: #fff9f0;
+}
+
+.high-risk-rank.top1 {
+  background: linear-gradient(135deg, #e07050 0%, #c25a3a 100%);
+}
+
+.high-risk-rank.top2 {
+  background: linear-gradient(135deg, #e09040 0%, #c87820 100%);
+}
+
+.high-risk-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.high-risk-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #5a4a3a;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.high-risk-count {
+  font-size: 14px;
+  font-weight: 700;
+  color: #c25a3a;
+  min-width: 60px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.risk-chart-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.risk-chart-row:last-child {
+  margin-bottom: 0;
+}
+
+.risk-chart-icon {
+  font-size: 18px;
+  width: 28px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.risk-chart-name {
+  font-size: 13px;
+  color: #6b5344;
+  min-width: 70px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.risk-chart-bar-container {
+  flex: 1;
+  height: 22px;
+  background-color: #faf6f0;
+  border-radius: 11px;
+  overflow: hidden;
+}
+
+.risk-chart-bar {
+  height: 100%;
+  border-radius: 11px;
+  transition: width 0.3s ease;
+}
+
+.risk-chart-bar.humidity {
+  background: linear-gradient(90deg, #8fb0d0 0%, #5a7a9a 100%);
+}
+
+.risk-chart-bar.bugs {
+  background: linear-gradient(90deg, #c09850 0%, #8b6914 100%);
+}
+
+.risk-chart-bar.sunlight {
+  background: linear-gradient(90deg, #e8c878 0%, #c8942e 100%);
+}
+
+.risk-chart-bar.damage {
+  background: linear-gradient(90deg, #e08868 0%, #c25a3a 100%);
+}
+
+.risk-chart-bar.mold {
+  background: linear-gradient(90deg, #8fbc8f 0%, #5a8f5a 100%);
+}
+
+.risk-chart-bar.temperature {
+  background: linear-gradient(90deg, #e08888 0%, #c05050 100%);
+}
+
+.risk-chart-bar.other {
+  background: linear-gradient(90deg, #b09878 0%, #7a6040 100%);
+}
+
+.risk-chart-count {
+  font-size: 13px;
+  color: #a08060;
+  min-width: 40px;
+  text-align: right;
+  font-weight: 600;
+  flex-shrink: 0;
 }

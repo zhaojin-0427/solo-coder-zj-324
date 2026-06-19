@@ -1,17 +1,57 @@
 import { useState, useEffect } from 'react'
 import HeirloomCard from '../components/HeirloomCard'
 import { itemsApi, familyMembersApi } from '../services/api'
-import { HeirloomItem, FamilyMember } from '../types'
+import { HeirloomItem, FamilyMember, INSPECTION_STATUS_FILTERS, InspectionStatusFilter, INSPECTION_RISK_TYPES } from '../types'
 import './ItemsPage.css'
 
 const CATEGORY_OPTIONS = ['饰品', '瓷器', '文献', '家具', '文玩', '首饰', '钟表', '其他']
 const CONDITION_OPTIONS = ['完好', '良好', '一般', '需修复']
+
+function parseRiskList(risksStr?: string): string[] {
+  if (!risksStr) return []
+  return risksStr
+    .split(/[,，、\s]+/)
+    .map((r) => r.trim())
+    .filter((r) => r.length > 0)
+}
+
+function isInspectionOverdue(nextReviewDate?: string): boolean {
+  if (!nextReviewDate) return false
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const next = new Date(nextReviewDate)
+  next.setHours(0, 0, 0, 0)
+  return next < today
+}
+
+function getItemInspectionStatus(item: HeirloomItem): 'pending' | 'risk' | 'deteriorated' | 'normal' | 'none' {
+  const records = item.inspection_records || []
+  if (records.length === 0) return 'none'
+  const sorted = records.slice().sort((a, b) => new Date(b.inspection_date).getTime() - new Date(a.inspection_date).getTime())
+  const latest = sorted[0]
+  const risks = parseRiskList(latest.environmental_risks)
+  const hasRisk = risks.length > 0 || !latest.is_present
+  const isOverdue = isInspectionOverdue(latest.next_review_date)
+  const condChange = (latest.condition_change || '').toLowerCase()
+  const isDeteriorated =
+    condChange.includes('变差') ||
+    condChange.includes('恶化') ||
+    condChange.includes('损坏') ||
+    condChange.includes('破损扩大') ||
+    condChange.includes('脆化')
+
+  if (isOverdue || (latest.next_review_date && !isOverdue)) return 'pending'
+  if (hasRisk) return 'risk'
+  if (isDeteriorated) return 'deteriorated'
+  return 'normal'
+}
 
 function ItemsPage() {
   const [items, setItems] = useState<HeirloomItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedCategory, setSelectedCategory] = useState('全部')
+  const [selectedStatus, setSelectedStatus] = useState<InspectionStatusFilter>('全部')
   const [showAddModal, setShowAddModal] = useState(false)
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([])
   const [submitting, setSubmitting] = useState(false)
@@ -49,10 +89,17 @@ function ItemsPage() {
 
   const categories = ['全部', ...new Set(items.map((item) => item.category))]
 
-  const filteredItems =
-    selectedCategory === '全部'
-      ? items
-      : items.filter((item) => item.category === selectedCategory)
+  const filteredItems = items.filter((item) => {
+    if (selectedCategory !== '全部' && item.category !== selectedCategory) return false
+    if (selectedStatus !== '全部') {
+      const status = getItemInspectionStatus(item)
+      if (selectedStatus === '待复查' && status !== 'pending') return false
+      if (selectedStatus === '存在风险' && status !== 'risk') return false
+      if (selectedStatus === '状态变差' && status !== 'deteriorated') return false
+      if (selectedStatus === '正常' && status !== 'normal') return false
+    }
+    return true
+  })
 
   const togglePerson = (id: string | number) => {
     setFormData((prev) => ({
@@ -155,6 +202,23 @@ function ItemsPage() {
             onClick={() => setSelectedCategory(cat)}
           >
             {cat}
+          </button>
+        ))}
+      </div>
+
+      <div className="filter-bar secondary">
+        <span className="filter-bar-label">盘点状态：</span>
+        {INSPECTION_STATUS_FILTERS.map((status) => (
+          <button
+            key={status}
+            className={`filter-btn status-btn ${selectedStatus === status ? 'active' : ''}`}
+            onClick={() => setSelectedStatus(status)}
+          >
+            {status === '待复查' && '⏰ '}
+            {status === '存在风险' && '⚠️ '}
+            {status === '状态变差' && '📉 '}
+            {status === '正常' && '✓ '}
+            {status}
           </button>
         ))}
       </div>

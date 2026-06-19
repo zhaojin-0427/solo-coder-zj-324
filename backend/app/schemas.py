@@ -208,6 +208,42 @@ class HeirloomItemUpdate(BaseModel):
     related_people_ids: Optional[List[int]] = None
 
 
+class InspectionRecordBase(BaseModel):
+    inspection_date: str
+    inspector: str
+    is_present: bool = True
+    condition_change: Optional[str] = None
+    environmental_risks: Optional[str] = None
+    handling_suggestions: Optional[str] = None
+    next_review_date: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class InspectionRecordCreate(InspectionRecordBase):
+    pass
+
+
+class InspectionRecordUpdate(BaseModel):
+    inspection_date: Optional[str] = None
+    inspector: Optional[str] = None
+    is_present: Optional[bool] = None
+    condition_change: Optional[str] = None
+    environmental_risks: Optional[str] = None
+    handling_suggestions: Optional[str] = None
+    next_review_date: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class InspectionRecord(InspectionRecordBase):
+    id: int
+    item_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class HeirloomItem(HeirloomItemBase):
     id: int
     created_at: datetime
@@ -219,6 +255,7 @@ class HeirloomItem(HeirloomItemBase):
     intentions: List[InheritanceIntention] = []
     discussions: List[Discussion] = []
     attachments: List[ItemAttachment] = []
+    inspection_records: List[InspectionRecord] = []
 
     class Config:
         from_attributes = True
@@ -260,6 +297,21 @@ class TopAttachmentContributor(BaseModel):
     count: int
 
 
+class InspectionRiskTypeItem(BaseModel):
+    risk_type: str
+    count: int
+    percentage: float
+
+
+class HighRiskItem(BaseModel):
+    id: int
+    name: str
+    risk_count: int
+    latest_risk_types: List[str] = []
+    next_review_date: Optional[str] = None
+    is_overdue: bool = False
+
+
 class StatisticsResponse(BaseModel):
     confirmed_inheritance_count: int
     category_distribution: List[CategoryDistributionItem]
@@ -274,3 +326,11 @@ class StatisticsResponse(BaseModel):
     attachment_type_distribution: List[AttachmentTypeDistributionItem] = []
     items_without_image_attachments_count: int = 0
     top_attachment_contributors: List[TopAttachmentContributor] = []
+    pending_review_count: int = 0
+    at_risk_count: int = 0
+    deteriorated_count: int = 0
+    normal_status_count: int = 0
+    overdue_review_count: int = 0
+    recent_30days_inspection_count: int = 0
+    inspection_risk_type_distribution: List[InspectionRiskTypeItem] = []
+    high_risk_items: List[HighRiskItem] = []

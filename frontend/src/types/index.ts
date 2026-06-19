@@ -75,6 +75,51 @@ export const ATTACHMENT_TYPE_META: Record<string, { icon: string; color: string 
   扫描文档链接: { icon: '📄', color: '#5a8f5a' },
 }
 
+export const INSPECTION_RISK_TYPES = [
+  '潮湿',
+  '虫蛀',
+  '阳光直射',
+  '破损扩大',
+  '发霉',
+  '温度过高',
+  '其他',
+] as const
+
+export const INSPECTION_RISK_META: Record<string, { icon: string; color: string }> = {
+  潮湿: { icon: '💧', color: '#6b8cae' },
+  虫蛀: { icon: '🐛', color: '#8b6914' },
+  阳光直射: { icon: '☀️', color: '#c8942e' },
+  破损扩大: { icon: '⚠️', color: '#c25a3a' },
+  发霉: { icon: '🍄', color: '#5a8f5a' },
+  温度过高: { icon: '🔥', color: '#e07b3a' },
+  其他: { icon: '❓', color: '#a08060' },
+}
+
+export const INSPECTION_STATUS_FILTERS = [
+  '全部',
+  '待复查',
+  '存在风险',
+  '状态变差',
+  '正常',
+] as const
+
+export type InspectionStatusFilter = typeof INSPECTION_STATUS_FILTERS[number]
+
+export interface InspectionRecord {
+  id: string | number
+  item_id: string | number
+  inspection_date: string
+  inspector: string
+  is_present: boolean
+  condition_change?: string
+  environmental_risks?: string
+  handling_suggestions?: string
+  next_review_date?: string
+  notes?: string
+  created_at?: string
+  updated_at?: string
+}
+
 export interface ItemAttachment {
   id: string | number;
   item_id: string | number;
@@ -107,6 +152,7 @@ export interface HeirloomItem {
   intentions: InheritanceIntention[];
   discussions: Discussion[];
   attachments: ItemAttachment[];
+  inspection_records: InspectionRecord[];
 }
 
 export interface CategoryDistributionItem {
@@ -145,6 +191,21 @@ export interface TopAttachmentContributor {
   count: number;
 }
 
+export interface InspectionRiskTypeItem {
+  risk_type: string
+  count: number
+  percentage?: number
+}
+
+export interface HighRiskItem {
+  id: string | number
+  name: string
+  risk_count: number
+  latest_risk_types: string[]
+  next_review_date?: string
+  is_overdue: boolean
+}
+
 export interface StatisticsResponse {
   confirmed_inheritance_count: number;
   category_distribution: CategoryDistributionItem[];
@@ -159,6 +220,14 @@ export interface StatisticsResponse {
   attachment_type_distribution: AttachmentTypeDistributionItem[];
   items_without_image_attachments_count: number;
   top_attachment_contributors: TopAttachmentContributor[];
+  pending_review_count: number
+  at_risk_count: number
+  deteriorated_count: number
+  normal_status_count: number
+  overdue_review_count: number
+  recent_30days_inspection_count: number
+  inspection_risk_type_distribution: InspectionRiskTypeItem[]
+  high_risk_items: HighRiskItem[]
 }
 
 export interface DiscussionFilterParams {

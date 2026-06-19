@@ -20,7 +20,56 @@ function isImageUrl(str?: string): boolean {
   return str.startsWith('http://') || str.startsWith('https://') || str.startsWith('data:')
 }
 
+function parseRiskList(risksStr?: string): string[] {
+  if (!risksStr) return []
+  return risksStr
+    .split(/[,，、\s]+/)
+    .map((r) => r.trim())
+    .filter((r) => r.length > 0)
+}
+
+function isInspectionOverdue(nextReviewDate?: string): boolean {
+  if (!nextReviewDate) return false
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const next = new Date(nextReviewDate)
+  next.setHours(0, 0, 0, 0)
+  return next < today
+}
+
+function getCardInspectionBadges(item: HeirloomItem): { type: 'overdue' | 'risk' | 'deteriorated'; text: string }[] {
+  const records = item.inspection_records || []
+  if (records.length === 0) return []
+  const sorted = records
+    .slice()
+    .sort((a, b) => new Date(b.inspection_date).getTime() - new Date(a.inspection_date).getTime())
+  const latest = sorted[0]
+  const badges: { type: 'overdue' | 'risk' | 'deteriorated'; text: string }[] = []
+
+  const isOverdue = isInspectionOverdue(latest.next_review_date)
+  if (isOverdue) {
+    badges.push({ type: 'overdue', text: '⚠️ 逾期未复查' })
+  }
+  const risks = parseRiskList(latest.environmental_risks)
+  const hasRisk = risks.length > 0 || !latest.is_present
+  if (hasRisk && !isOverdue) {
+    badges.push({ type: 'risk', text: '⚠️ 存在风险' })
+  }
+  const condChange = (latest.condition_change || '').toLowerCase()
+  const isDeteriorated =
+    condChange.includes('变差') ||
+    condChange.includes('恶化') ||
+    condChange.includes('损坏') ||
+    condChange.includes('破损扩大') ||
+    condChange.includes('脆化')
+  if (isDeteriorated && !hasRisk && !isOverdue) {
+    badges.push({ type: 'deteriorated', text: '📉 状态变差' })
+  }
+  return badges
+}
+
 function HeirloomCard({ item }: HeirloomCardProps) {
+  const inspectionBadges = getCardInspectionBadges(item)
   return (
     <Link to={`/items/${item.id}`} className="heirloom-card">
       <div className="card-image">
@@ -43,6 +92,15 @@ function HeirloomCard({ item }: HeirloomCardProps) {
         >
           {item.condition || '未标注'}
         </span>
+        {inspectionBadges.length > 0 && (
+          <div className="inspection-badges">
+            {inspectionBadges.map((badge, idx) => (
+              <span key={idx} className={`inspection-card-badge ${badge.type}`}>
+                {badge.text}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
       <div className="card-content">
         <h3 className="card-title">{item.name}</h3>

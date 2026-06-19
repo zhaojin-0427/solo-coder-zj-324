@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { itemsApi, repairRecordsApi, storageApi, intentionsApi, discussionsApi, attachmentsApi } from '../services/api'
+import { itemsApi, repairRecordsApi, storageApi, intentionsApi, discussionsApi, attachmentsApi, inspectionsApi } from '../services/api'
 import {
   HeirloomItem,
   RepairRecord,
@@ -10,6 +10,9 @@ import {
   ItemAttachment,
   ATTACHMENT_TYPES,
   ATTACHMENT_TYPE_META,
+  InspectionRecord,
+  INSPECTION_RISK_TYPES,
+  INSPECTION_RISK_META,
 } from '../types'
 import './ItemDetailPage.css'
 
@@ -34,6 +37,38 @@ function getConditionColor(condition: string): string {
   if (c.includes('一般') || c.includes('划痕') || c.includes('泛黄')) return '#c8942e'
   if (c.includes('修复') || c.includes('保养') || c.includes('破损')) return '#c25a3a'
   return '#a08060'
+}
+
+function parseRiskList(risksStr?: string): string[] {
+  if (!risksStr) return []
+  return risksStr
+    .split(/[,，、\s]+/)
+    .map((r) => r.trim())
+    .filter((r) => r.length > 0)
+}
+
+function isInspectionOverdue(nextReviewDate?: string): boolean {
+  if (!nextReviewDate) return false
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const next = new Date(nextReviewDate)
+  next.setHours(0, 0, 0, 0)
+  return next < today
+}
+
+function hasInspectionRisk(rec: InspectionRecord): boolean {
+  return parseRiskList(rec.environmental_risks).length > 0 || !rec.is_present
+}
+
+function hasInspectionDeteriorated(rec: InspectionRecord): boolean {
+  const c = (rec.condition_change || '').toLowerCase()
+  return (
+    c.includes('变差') ||
+    c.includes('恶化') ||
+    c.includes('损坏') ||
+    c.includes('破损扩大') ||
+    c.includes('脆化')
+  )
 }
 
 function ItemDetailPage() {
@@ -84,6 +119,20 @@ function ItemDetailPage() {
   })
   const [attachmentVisibility, setAttachmentVisibility] = useState<'all' | 'public' | 'private'>('all')
   const [selectedAttachment, setSelectedAttachment] = useState<ItemAttachment | null>(null)
+
+  const [showInspectionModal, setShowInspectionModal] = useState(false)
+  const [editingInspection, setEditingInspection] = useState<InspectionRecord | null>(null)
+  const [inspectionForm, setInspectionForm] = useState<Partial<InspectionRecord>>({
+    inspection_date: new Date().toISOString().split('T')[0],
+    inspector: '',
+    is_present: true,
+    condition_change: '',
+    environmental_risks: '',
+    handling_suggestions: '',
+    next_review_date: '',
+    notes: '',
+  })
+  const [selectedInspectionRisks, setSelectedInspectionRisks] = useState<string[]>([])
 
   useEffect(() => {
     if (!id) return
@@ -267,6 +316,88 @@ function ItemDetailPage() {
     }
   }
 
+  const openInspectionModal = (record?: InspectionRecord) => {
+    if (record) {
+      setEditingInspection(record)
+      setInspectionForm({
+        inspection_date: record.inspection_date,
+        inspector: record.inspector,
+        is_present: record.is_present,
+        condition_change: record.condition_change || '',
+        environmental_risks: record.environmental_risks || '',
+        handling_suggestions: record.handling_suggestions || '',
+        next_review_date: record.next_review_date || '',
+        notes: record.notes || '',
+      })
+      setSelectedInspectionRisks(parseRiskList(record.environmental_risks))
+    } else {
+      setEditingInspection(null)
+      setInspectionForm({
+        inspection_date: new Date().toISOString().split('T')[0],
+        inspector: '',
+        is_present: true,
+        condition_change: '',
+        environmental_risks: '',
+        handling_suggestions: '',
+        next_review_date: '',
+        notes: '',
+      })
+      setSelectedInspectionRisks([])
+    }
+    setShowInspectionModal(true)
+  }
+
+  const toggleInspectionRisk = (risk: string) => {
+    setSelectedInspectionRisks((prev) =>
+      prev.includes(risk) ? prev.filter((r) => r !== risk) : [...prev, risk]
+    )
+  }
+
+  const handleSubmitInspection = async () => {
+    if (!id) return
+    if (!inspectionForm.inspection_date || !inspectionForm.inspector?.trim()) {
+      setError('请填写盘点日期和盘点人')
+      return
+    }
+    try {
+      setSubmitting(true)
+      setError(null)
+      const payload = {
+        ...inspectionForm,
+        environmental_risks: selectedInspectionRisks.join(','),
+      }
+      if (editingInspection) {
+        await inspectionsApi.updateInspection(id, editingInspection.id, payload)
+      } else {
+        await inspectionsApi.createInspection(id, payload)
+      }
+      const data = await itemsApi.getItem(id)
+      setItem(data)
+      setShowInspectionModal(false)
+      setEditingInspection(null)
+    } catch (err: any) {
+      setError(err.message || '保存盘点记录失败')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleDeleteInspection = async (inspectionId: string | number) => {
+    if (!id) return
+    if (!window.confirm('确定要删除该盘点记录吗？')) return
+    try {
+      setSubmitting(true)
+      setError(null)
+      await inspectionsApi.deleteInspection(id, inspectionId)
+      const data = await itemsApi.getItem(id)
+      setItem(data)
+    } catch (err: any) {
+      setError(err.message || '删除盘点记录失败')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   const openAttachmentModal = () => {
     setAttachmentForm({
       attachment_type: '实物照片',
@@ -295,6 +426,15 @@ function ItemDetailPage() {
   const sortedIntentions = (item?.intentions || []).slice().sort((a, b) => b.version - a.version)
   const finalIntention = sortedIntentions.find((i) => i.is_final) || null
   const hasConfirmed = !!finalIntention
+
+  const sortedInspections = (item?.inspection_records || [])
+    .slice()
+    .sort((a, b) => new Date(b.inspection_date).getTime() - new Date(a.inspection_date).getTime())
+  const latestInspection = sortedInspections[0] || null
+  const hasLatestRisk = latestInspection ? hasInspectionRisk(latestInspection) : false
+  const isLatestOverdue = latestInspection
+    ? isInspectionOverdue(latestInspection.next_review_date)
+    : false
 
   const allAuthors = Array.from(
     new Set((item?.discussions || []).map((d) => d.author).filter(Boolean))
@@ -424,6 +564,62 @@ function ItemDetailPage() {
                 )}
               </div>
             </div>
+          </div>
+
+          <div className="inspection-status">
+            <h4 className="section-title-sm">🔍 盘点状态</h4>
+            <div className="status-grid">
+              <div className="status-mini-card">
+                <span className="status-num">{sortedInspections.length}</span>
+                <span className="status-label">盘点次数</span>
+              </div>
+              <div className="status-mini-card">
+                {isLatestOverdue ? (
+                  <>
+                    <span className="status-num risk">⚠️</span>
+                    <span className="status-label risk">逾期未复查</span>
+                  </>
+                ) : latestInspection?.next_review_date ? (
+                  <>
+                    <span className="status-num pending">⏰</span>
+                    <span className="status-label">待复查</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="status-num">—</span>
+                    <span className="status-label">无复查计划</span>
+                  </>
+                )}
+              </div>
+              <div className="status-mini-card">
+                {hasLatestRisk ? (
+                  <>
+                    <span className="status-num risk">⚠️</span>
+                    <span className="status-label risk">存在风险</span>
+                  </>
+                ) : latestInspection ? (
+                  <>
+                    <span className="status-num confirmed">✓</span>
+                    <span className="status-label">状态正常</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="status-num">—</span>
+                    <span className="status-label">暂无盘点</span>
+                  </>
+                )}
+              </div>
+            </div>
+            {(hasLatestRisk || isLatestOverdue) && latestInspection && (
+              <div className={`inspection-alert ${isLatestOverdue ? 'overdue' : 'risk'}`}>
+                <span className="alert-icon">⚠️</span>
+                <span className="alert-text">
+                  {isLatestOverdue
+                    ? `复查已逾期（计划日期：${latestInspection.next_review_date}）`
+                    : `最新盘点发现风险：${parseRiskList(latestInspection.environmental_risks).join('、')}`}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -696,7 +892,134 @@ function ItemDetailPage() {
 
           <div className="info-section">
             <div className="section-header">
-              <h3 className="section-title">📍 存放位置</h3>
+              <h3 className="section-title">� 盘点记录</h3>
+              <button
+                className="action-btn secondary small"
+                onClick={() => openInspectionModal()}
+              >
+                + 新增盘点
+              </button>
+            </div>
+            {sortedInspections.length > 0 ? (
+              <div className="inspection-list">
+                {sortedInspections.map((rec) => {
+                  const risks = parseRiskList(rec.environmental_risks)
+                  const isRisk = risks.length > 0 || !rec.is_present
+                  const isOverdue = isInspectionOverdue(rec.next_review_date)
+                  const isDeteriorated = hasInspectionDeteriorated(rec)
+                  return (
+                    <div
+                      key={rec.id}
+                      className={`inspection-item ${
+                        isOverdue ? 'overdue' : isRisk ? 'risk' : isDeteriorated ? 'deteriorated' : ''
+                      }`}
+                    >
+                      <div className="inspection-header">
+                        <div className="inspection-date-row">
+                          <span className="inspection-date">📅 {rec.inspection_date}</span>
+                          {!rec.is_present && (
+                            <span className="inspection-badge missing">❌ 实物不在位</span>
+                          )}
+                          {isOverdue && (
+                            <span className="inspection-badge overdue">⚠️ 复查已逾期</span>
+                          )}
+                          {isRisk && rec.is_present && (
+                            <span className="inspection-badge risk">⚠️ 存在风险</span>
+                          )}
+                          {isDeteriorated && !isRisk && rec.is_present && (
+                            <span className="inspection-badge deteriorated">📉 状态变差</span>
+                          )}
+                        </div>
+                        <div className="inspection-actions">
+                          <button
+                            className="action-btn-link"
+                            onClick={() => openInspectionModal(rec)}
+                          >
+                            编辑
+                          </button>
+                          <button
+                            className="action-btn-link danger"
+                            onClick={() => handleDeleteInspection(rec.id)}
+                          >
+                            删除
+                          </button>
+                        </div>
+                      </div>
+                      <div className="inspection-body">
+                        <div className="inspection-row">
+                          <span className="inspection-k">盘点人：</span>
+                          <span className="inspection-v">{rec.inspector}</span>
+                        </div>
+                        {rec.condition_change && (
+                          <div className="inspection-row">
+                            <span className="inspection-k">状态变化：</span>
+                            <span
+                              className={`inspection-v ${
+                                isDeteriorated ? 'text-danger' : ''
+                              }`}
+                            >
+                              {rec.condition_change}
+                            </span>
+                          </div>
+                        )}
+                        {risks.length > 0 && (
+                          <div className="inspection-row">
+                            <span className="inspection-k">环境风险：</span>
+                            <span className="inspection-v risk-tags">
+                              {risks.map((r) => {
+                                const meta = INSPECTION_RISK_META[r] || {
+                                  icon: '⚠️',
+                                  color: '#c25a3a',
+                                }
+                                return (
+                                  <span
+                                    key={r}
+                                    className="risk-tag"
+                                    style={{ backgroundColor: meta.color + '22', color: meta.color, borderColor: meta.color + '66' }}
+                                  >
+                                    {meta.icon} {r}
+                                  </span>
+                                )
+                              })}
+                            </span>
+                          </div>
+                        )}
+                        {rec.handling_suggestions && (
+                          <div className="inspection-row">
+                            <span className="inspection-k">处理建议：</span>
+                            <span className="inspection-v">{rec.handling_suggestions}</span>
+                          </div>
+                        )}
+                        {rec.next_review_date && (
+                          <div className="inspection-row">
+                            <span className="inspection-k">下次复查：</span>
+                            <span
+                              className={`inspection-v ${isOverdue ? 'text-danger' : ''}`}
+                            >
+                              {rec.next_review_date}
+                              {isOverdue && '（已逾期）'}
+                            </span>
+                          </div>
+                        )}
+                        {rec.notes && (
+                          <div className="inspection-row">
+                            <span className="inspection-k">备注：</span>
+                            <span className="inspection-v">{rec.notes}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className="empty-text">暂无盘点记录，点击右上角按钮进行首次盘点</p>
+            )}
+          </div>
+
+          <div className="info-section">
+            <div className="section-header">
+              <h3 className="section-title">� 存放位置</h3>
               <button
                 className="action-btn secondary small"
                 onClick={handleOpenStorageModal}
@@ -1169,6 +1492,141 @@ function ItemDetailPage() {
                 disabled={submitting}
               >
                 {submitting ? '删除中...' : '删除附件'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showInspectionModal && (
+        <div className="modal-overlay" onClick={() => setShowInspectionModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2 className="modal-title">
+              {editingInspection ? '编辑盘点记录' : '新增盘点记录'}
+            </h2>
+            <div className="form-row-two">
+              <div className="form-group">
+                <label>盘点日期 *</label>
+                <input
+                  type="date"
+                  value={inspectionForm.inspection_date || ''}
+                  onChange={(e) =>
+                    setInspectionForm({ ...inspectionForm, inspection_date: e.target.value })
+                  }
+                  className="form-input"
+                />
+              </div>
+              <div className="form-group">
+                <label>盘点人 *</label>
+                <input
+                  type="text"
+                  value={inspectionForm.inspector || ''}
+                  onChange={(e) =>
+                    setInspectionForm({ ...inspectionForm, inspector: e.target.value })
+                  }
+                  className="form-input"
+                  placeholder="请输入盘点人姓名"
+                />
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={inspectionForm.is_present ?? true}
+                  onChange={(e) =>
+                    setInspectionForm({ ...inspectionForm, is_present: e.target.checked })
+                  }
+                />
+                <span>实物在位</span>
+              </label>
+            </div>
+            <div className="form-group">
+              <label>保存状态变化</label>
+              <input
+                type="text"
+                className="form-input"
+                value={inspectionForm.condition_change || ''}
+                onChange={(e) =>
+                  setInspectionForm({ ...inspectionForm, condition_change: e.target.value })
+                }
+                placeholder="如：状态稳定、釉面光泽减退、纸张脆化等"
+              />
+            </div>
+            <div className="form-group">
+              <label>环境风险（可多选）</label>
+              <div className="checkbox-group risk-checkboxes">
+                {INSPECTION_RISK_TYPES.map((risk) => {
+                  const meta = INSPECTION_RISK_META[risk] || { icon: '⚠️', color: '#c25a3a' }
+                  return (
+                    <label
+                      key={risk}
+                      className={`checkbox-item risk-item ${
+                        selectedInspectionRisks.includes(risk) ? 'checked' : ''
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedInspectionRisks.includes(risk)}
+                        onChange={() => toggleInspectionRisk(risk)}
+                      />
+                      <span>
+                        {meta.icon} {risk}
+                      </span>
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+            <div className="form-group">
+              <label>处理建议</label>
+              <textarea
+                className="form-textarea"
+                rows={3}
+                value={inspectionForm.handling_suggestions || ''}
+                onChange={(e) =>
+                  setInspectionForm({ ...inspectionForm, handling_suggestions: e.target.value })
+                }
+                placeholder="针对当前状态的处理建议和措施"
+              />
+            </div>
+            <div className="form-group">
+              <label>下次复查日期</label>
+              <input
+                type="date"
+                className="form-input"
+                value={inspectionForm.next_review_date || ''}
+                onChange={(e) =>
+                  setInspectionForm({ ...inspectionForm, next_review_date: e.target.value })
+                }
+              />
+            </div>
+            <div className="form-group">
+              <label>备注</label>
+              <textarea
+                className="form-textarea"
+                rows={2}
+                value={inspectionForm.notes || ''}
+                onChange={(e) =>
+                  setInspectionForm({ ...inspectionForm, notes: e.target.value })
+                }
+                placeholder="其他需要说明的内容"
+              />
+            </div>
+            <div className="modal-actions">
+              <button
+                className="btn-secondary"
+                onClick={() => setShowInspectionModal(false)}
+                disabled={submitting}
+              >
+                取消
+              </button>
+              <button
+                className="btn-primary"
+                onClick={handleSubmitInspection}
+                disabled={submitting}
+              >
+                {submitting ? '保存中...' : '保存'}
               </button>
             </div>
           </div>

@@ -1222,3 +1222,243 @@
 .btn-primary.danger:hover:not(:disabled) {
   background-color: #a84a2e;
 }
+
+.inspection-status {
+  background: linear-gradient(135deg, #fff9f0 0%, #faf6f0 100%);
+  border: 1px solid #f0e6d6;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.inspection-alert {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.inspection-alert.overdue {
+  background-color: rgba(194, 90, 58, 0.1);
+  color: #c25a3a;
+  border: 1px solid rgba(194, 90, 58, 0.2);
+}
+
+.inspection-alert.risk {
+  background-color: rgba(200, 148, 46, 0.1);
+  color: #c8942e;
+  border: 1px solid rgba(200, 148, 46, 0.2);
+}
+
+.status-num.risk {
+  color: #c25a3a;
+}
+
+.status-label.risk {
+  color: #c25a3a;
+}
+
+.inspection-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.inspection-item {
+  background-color: #faf6f0;
+  border-radius: 10px;
+  padding: 18px;
+  border: 1px solid #f0e6d6;
+  border-left: 3px solid #8b6914;
+}
+
+.inspection-item.risk {
+  border-left-color: #c8942e;
+  background-color: rgba(200, 148, 46, 0.04);
+}
+
+.inspection-item.overdue {
+  border-left-color: #c25a3a;
+  background-color: rgba(194, 90, 58, 0.04);
+}
+
+.inspection-item.deteriorated {
+  border-left-color: #d4a030;
+}
+
+.inspection-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed #e8d5bc;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.inspection-date-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.inspection-badge {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.inspection-badge.overdue {
+  background-color: rgba(194, 90, 58, 0.12);
+  color: #c25a3a;
+}
+
+.inspection-badge.risk {
+  background-color: rgba(200, 148, 46, 0.12);
+  color: #c8942e;
+}
+
+.inspection-badge.deteriorated {
+  background-color: rgba(212, 160, 48, 0.12);
+  color: #a07a20;
+}
+
+.inspection-badge.normal {
+  background-color: rgba(90, 143, 90, 0.12);
+  color: #5a8f5a;
+}
+
+.inspection-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.action-btn-link {
+  background: none;
+  border: none;
+  color: #8b6914;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  transition: color 0.2s ease;
+}
+
+.action-btn-link:hover {
+  color: #7a5a10;
+  text-decoration: underline;
+}
+
+.action-btn-link.danger {
+  color: #c25a3a;
+}
+
+.action-btn-link.danger:hover {
+  color: #a84a2e;
+}
+
+.inspection-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inspection-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.inspection-k {
+  font-size: 13px;
+  color: #a08060;
+  font-weight: 500;
+  min-width: 90px;
+  flex-shrink: 0;
+}
+
+.inspection-v {
+  font-size: 13px;
+  color: #5a4a3a;
+  flex: 1;
+  line-height: 1.6;
+}
+
+.risk-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.risk-tag {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.risk-tag.humidity {
+  background-color: rgba(107, 140, 174, 0.15);
+  color: #5a7a9a;
+}
+
+.risk-tag.bugs {
+  background-color: rgba(139, 105, 20, 0.15);
+  color: #8b6914;
+}
+
+.risk-tag.sunlight {
+  background-color: rgba(212, 168, 83, 0.2);
+  color: #a07a20;
+}
+
+.risk-tag.damage {
+  background-color: rgba(194, 90, 58, 0.15);
+  color: #c25a3a;
+}
+
+.risk-tag.mold {
+  background-color: rgba(90, 143, 90, 0.15);
+  color: #4a7a4a;
+}
+
+.risk-tag.temperature {
+  background-color: rgba(200, 100, 100, 0.15);
+  color: #a04040;
+}
+
+.risk-tag.other {
+  background-color: rgba(160, 128, 96, 0.15);
+  color: #7a6040;
+}
+
+.text-danger {
+  color: #c25a3a;
+  font-weight: 500;
+}
+
+.risk-checkboxes {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.checkbox-item.risk-item {
+  padding: 8px 12px;
+  background-color: #faf6f0;
+  border-radius: 6px;
+  border: 1px solid #f0e6d6;
+}
+
+.form-row-two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}

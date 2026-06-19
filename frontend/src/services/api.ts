@@ -10,6 +10,7 @@ import {
   ItemAttachment,
   StatisticsResponse,
   DiscussionFilterParams,
+  InspectionRecord,
 } from '../types'
 
 const api = axios.create({
@@ -184,6 +185,41 @@ export const discussionsApi = {
 export const statisticsApi = {
   getStatistics: (): Promise<StatisticsResponse> => {
     return api.get('/statistics')
+  },
+}
+
+export const inspectionsApi = {
+  getInspections: (itemId: string | number): Promise<InspectionRecord[]> => {
+    return api.get(`/items/${itemId}/inspections`)
+  },
+
+  getInspection: (
+    itemId: string | number,
+    inspectionId: string | number
+  ): Promise<InspectionRecord> => {
+    return api.get(`/items/${itemId}/inspections/${inspectionId}`)
+  },
+
+  createInspection: (
+    itemId: string | number,
+    data: Partial<InspectionRecord>
+  ): Promise<InspectionRecord> => {
+    return api.post(`/items/${itemId}/inspections`, data)
+  },
+
+  updateInspection: (
+    itemId: string | number,
+    inspectionId: string | number,
+    data: Partial<InspectionRecord>
+  ): Promise<InspectionRecord> => {
+    return api.put(`/items/${itemId}/inspections/${inspectionId}`, data)
+  },
+
+  deleteInspection: (
+    itemId: string | number,
+    inspectionId: string | number
+  ): Promise<void> => {
+    return api.delete(`/items/${itemId}/inspections/${inspectionId}`)
   },
 }
 

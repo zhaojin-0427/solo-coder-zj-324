@@ -2,8 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base, SessionLocal
 from . import models
-from .routers import items, story_cards, inheritance, discussions, statistics, attachments
-from .models import FamilyMember, HeirloomItem, StoryCard, RepairRecord, StorageLocation, InheritanceIntention, Discussion, ItemAttachment
+from .routers import items, story_cards, inheritance, discussions, statistics, attachments, inspections
+from .models import FamilyMember, HeirloomItem, StoryCard, RepairRecord, StorageLocation, InheritanceIntention, Discussion, ItemAttachment, InspectionRecord
 
 Base.metadata.create_all(bind=engine)
 
@@ -23,6 +23,7 @@ app.include_router(inheritance.router, prefix="/api", tags=["inheritance"])
 app.include_router(discussions.router, prefix="/api", tags=["discussions"])
 app.include_router(statistics.router, prefix="/api", tags=["statistics"])
 app.include_router(attachments.router, prefix="/api", tags=["attachments"])
+app.include_router(inspections.router, prefix="/api", tags=["inspections"])
 
 
 def init_seed_data():
@@ -292,10 +293,131 @@ def init_attachment_seed_data():
         db.close()
 
 
+def init_inspection_seed_data():
+    db = SessionLocal()
+    try:
+        if db.query(InspectionRecord).count() > 0:
+            return
+
+        items_list = db.query(HeirloomItem).order_by(HeirloomItem.id).all()
+        if not items_list:
+            return
+
+        inspection_list = []
+        if len(items_list) > 0:
+            item = items_list[0]
+            inspection_list.extend([
+                InspectionRecord(
+                    item_id=item.id,
+                    inspection_date="2025-01-15",
+                    inspector="爸爸",
+                    is_present=True,
+                    condition_change="状态稳定，无明显变化",
+                    environmental_risks="",
+                    handling_suggestions="继续放置于保险柜内，保持干燥",
+                    next_review_date="2026-01-15",
+                    notes="走时精准，外观完好"
+                ),
+                InspectionRecord(
+                    item_id=item.id,
+                    inspection_date="2024-06-20",
+                    inspector="小明",
+                    is_present=True,
+                    condition_change="正常",
+                    environmental_risks="",
+                    handling_suggestions="定期上链，避免长时间静置",
+                    next_review_date="2025-01-15",
+                    notes=""
+                ),
+            ])
+
+        if len(items_list) > 1:
+            item = items_list[1]
+            inspection_list.extend([
+                InspectionRecord(
+                    item_id=item.id,
+                    inspection_date="2025-03-10",
+                    inspector="妈妈",
+                    is_present=True,
+                    condition_change="表面釉色略有失光",
+                    environmental_risks="阳光直射",
+                    handling_suggestions="移至避免阳光直射位置，或使用遮光帘",
+                    next_review_date="2025-09-10",
+                    notes="底部发现轻微灰尘堆积，已擦拭"
+                ),
+                InspectionRecord(
+                    item_id=item.id,
+                    inspection_date="2024-09-05",
+                    inspector="奶奶",
+                    is_present=True,
+                    condition_change="状态变差，釉面光泽减退",
+                    environmental_risks="阳光直射,灰尘",
+                    handling_suggestions="调整摆放位置，避免强光照射",
+                    next_review_date="2025-03-10",
+                    notes=""
+                ),
+            ])
+
+        if len(items_list) > 2:
+            item = items_list[2]
+            inspection_list.extend([
+                InspectionRecord(
+                    item_id=item.id,
+                    inspection_date="2025-02-28",
+                    inspector="小红",
+                    is_present=True,
+                    condition_change="纸张边缘继续脆化",
+                    environmental_risks="潮湿,温度过高",
+                    handling_suggestions="建议更换专业防霉防潮箱，控制湿度在40%-50%",
+                    next_review_date="2025-08-28",
+                    notes="部分照片粘连，建议数字化备份"
+                ),
+            ])
+
+        if len(items_list) > 3:
+            item = items_list[3]
+            inspection_list.extend([
+                InspectionRecord(
+                    item_id=item.id,
+                    inspection_date="2025-04-12",
+                    inspector="爷爷",
+                    is_present=True,
+                    condition_change="状态稳定",
+                    environmental_risks="虫蛀",
+                    handling_suggestions="放置樟脑丸防虫，定期检查",
+                    next_review_date="2026-04-12",
+                    notes="榫卯结构牢固"
+                ),
+            ])
+
+        if len(items_list) > 4:
+            item = items_list[4]
+            inspection_list.extend([
+                InspectionRecord(
+                    item_id=item.id,
+                    inspection_date="2025-05-01",
+                    inspector="小红",
+                    is_present=True,
+                    condition_change="状态良好",
+                    environmental_risks="",
+                    handling_suggestions="保持干燥存放即可",
+                    next_review_date="2026-05-01",
+                    notes="银面氧化属正常现象"
+                ),
+            ])
+
+        if inspection_list:
+            db.add_all(inspection_list)
+            db.commit()
+    finally:
+        db.close()
+
+
 @app.on_event("startup")
 async def startup_event():
     init_seed_data()
     init_attachment_seed_data()
+    init_inspection_seed_data()
 
 
 @app.get("/")
