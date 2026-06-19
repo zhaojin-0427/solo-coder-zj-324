@@ -377,7 +377,7 @@ function ItemDetailPage() {
                 <div className="final-row">
                   <span className="final-label">确认时间</span>
                   <span className="final-value">
-                    {formatDateTime(finalIntention.created_at)}
+                    {formatDateTime(finalIntention.confirmed_at || finalIntention.created_at)}
                   </span>
                 </div>
               </div>

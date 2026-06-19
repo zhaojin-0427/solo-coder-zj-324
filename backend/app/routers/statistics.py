@@ -50,8 +50,15 @@ def get_statistics(db: Session = Depends(get_db)):
             count=item_count
         ))
 
+    finalized_item_ids = db.query(
+        models.InheritanceIntention.item_id
+    ).filter(
+        models.InheritanceIntention.is_final == True
+    ).distinct().subquery()
+
     pending_intentions = db.query(models.InheritanceIntention).filter(
-        models.InheritanceIntention.is_final == False
+        models.InheritanceIntention.is_final == False,
+        models.InheritanceIntention.item_id.notin_(finalized_item_ids)
     ).count()
 
     pending_recipient_query = db.query(
@@ -59,7 +66,8 @@ def get_statistics(db: Session = Depends(get_db)):
         func.count(models.InheritanceIntention.id).label('count')
     ).filter(
         models.InheritanceIntention.is_final == False,
-        models.InheritanceIntention.proposed_recipient.isnot(None)
+        models.InheritanceIntention.proposed_recipient.isnot(None),
+        models.InheritanceIntention.item_id.notin_(finalized_item_ids)
     ).group_by(
         models.InheritanceIntention.proposed_recipient
     ).order_by(desc('count')).all()

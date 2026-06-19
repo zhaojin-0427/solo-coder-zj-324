@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from datetime import datetime
 from typing import List
 from ..database import get_db
 from .. import models, schemas
@@ -71,6 +72,7 @@ def confirm_intention(item_id: int, intention_id: int, db: Session = Depends(get
         raise HTTPException(status_code=400, detail="已存在其他最终确认的传承意向")
 
     intention.is_final = True
+    intention.confirmed_at = datetime.now()
 
     confirm_author = intention.proposed_by or "系统通知"
     recipient_info = f"，传承给：{intention.proposed_recipient}" if intention.proposed_recipient else ""

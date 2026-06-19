@@ -45,6 +45,7 @@ export interface InheritanceIntention {
   reason?: string;
   is_final: boolean;
   created_at?: string;
+  confirmed_at?: string;
 }
 
 export interface Discussion {

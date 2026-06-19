@@ -120,6 +120,7 @@ class InheritanceIntention(InheritanceIntentionBase):
     id: int
     item_id: int
     created_at: datetime
+    confirmed_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

@@ -98,6 +98,7 @@ class InheritanceIntention(Base):
     reason = Column(Text)
     is_final = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    confirmed_at = Column(DateTime(timezone=True))
 
     item = relationship("HeirloomItem", back_populates="intentions")
 
