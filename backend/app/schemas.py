@@ -145,6 +145,44 @@ class Discussion(DiscussionBase):
         from_attributes = True
 
 
+class ItemAttachmentBase(BaseModel):
+    attachment_type: str
+    title: str
+    url: str
+    capture_time: Optional[str] = None
+    uploader: Optional[str] = None
+    remark: Optional[str] = None
+    is_public: bool = True
+
+
+class ItemAttachmentCreate(ItemAttachmentBase):
+    pass
+
+
+class ItemAttachmentUpdate(BaseModel):
+    attachment_type: Optional[str] = None
+    title: Optional[str] = None
+    url: Optional[str] = None
+    capture_time: Optional[str] = None
+    uploader: Optional[str] = None
+    remark: Optional[str] = None
+    is_public: Optional[bool] = None
+
+
+class ItemAttachment(ItemAttachmentBase):
+    id: int
+    item_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class StoryCardEvidenceRequest(BaseModel):
+    attachment_ids: List[int] = []
+
+
 class HeirloomItemBase(BaseModel):
     name: str
     category: str
@@ -180,6 +218,7 @@ class HeirloomItem(HeirloomItemBase):
     storage_location: Optional[StorageLocation] = None
     intentions: List[InheritanceIntention] = []
     discussions: List[Discussion] = []
+    attachments: List[ItemAttachment] = []
 
     class Config:
         from_attributes = True
@@ -210,6 +249,17 @@ class ActiveDiscussionItem(BaseModel):
     last_discussion_at: Optional[datetime] = None
 
 
+class AttachmentTypeDistributionItem(BaseModel):
+    attachment_type: str
+    count: int
+    percentage: float
+
+
+class TopAttachmentContributor(BaseModel):
+    uploader: str
+    count: int
+
+
 class StatisticsResponse(BaseModel):
     confirmed_inheritance_count: int
     category_distribution: List[CategoryDistributionItem]
@@ -220,3 +270,7 @@ class StatisticsResponse(BaseModel):
     no_discussion_count: int
     negotiated_count: int
     active_discussion_items: List[ActiveDiscussionItem]
+    total_attachments: int = 0
+    attachment_type_distribution: List[AttachmentTypeDistributionItem] = []
+    items_without_image_attachments_count: int = 0
+    top_attachment_contributors: List[TopAttachmentContributor] = []

@@ -121,6 +121,49 @@ def get_statistics(db: Session = Depends(get_db)):
             last_discussion_at=last_discussion_at
         ))
 
+    total_attachments = db.query(models.ItemAttachment).count()
+
+    type_query = db.query(
+        models.ItemAttachment.attachment_type,
+        func.count(models.ItemAttachment.id).label('count')
+    ).group_by(models.ItemAttachment.attachment_type).all()
+
+    attachment_type_distribution = []
+    for attachment_type, count in type_query:
+        percentage = round((count / total_attachments * 100), 1) if total_attachments > 0 else 0
+        attachment_type_distribution.append(schemas.AttachmentTypeDistributionItem(
+            attachment_type=attachment_type,
+            count=count,
+            percentage=percentage
+        ))
+
+    items_with_image_query = db.query(
+        models.ItemAttachment.item_id
+    ).filter(
+        models.ItemAttachment.attachment_type.in_(models.IMAGE_ATTACHMENT_TYPES)
+    ).distinct().subquery()
+
+    items_without_image_attachments_count = db.query(models.HeirloomItem).filter(
+        ~models.HeirloomItem.id.in_(items_with_image_query)
+    ).count() if db.query(models.ItemAttachment).count() > 0 else total_items
+
+    contributor_query = db.query(
+        models.ItemAttachment.uploader,
+        func.count(models.ItemAttachment.id).label('count')
+    ).filter(
+        models.ItemAttachment.uploader.isnot(None),
+        models.ItemAttachment.uploader != ""
+    ).group_by(
+        models.ItemAttachment.uploader
+    ).order_by(desc('count')).limit(5).all()
+
+    top_attachment_contributors = []
+    for uploader, count in contributor_query:
+        top_attachment_contributors.append(schemas.TopAttachmentContributor(
+            uploader=uploader,
+            count=count
+        ))
+
     return schemas.StatisticsResponse(
         confirmed_inheritance_count=confirmed_count,
         category_distribution=category_distribution,
@@ -130,5 +173,9 @@ def get_statistics(db: Session = Depends(get_db)):
         pending_recipient_distribution=pending_recipient_distribution,
         no_discussion_count=no_discussion_count,
         negotiated_count=negotiated_count,
-        active_discussion_items=active_discussion_items
+        active_discussion_items=active_discussion_items,
+        total_attachments=total_attachments,
+        attachment_type_distribution=attachment_type_distribution,
+        items_without_image_attachments_count=items_without_image_attachments_count,
+        top_attachment_contributors=top_attachment_contributors
     )

@@ -1,8 +1,17 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { storyCardApi, itemsApi } from '../services/api'
-import { StoryCard, HeirloomItem } from '../types'
+import { StoryCard, HeirloomItem, ATTACHMENT_TYPE_META } from '../types'
 import './StoryCardPage.css'
+
+function isAttachmentImageLike(str?: string): boolean {
+  if (!str) return false
+  if (str.startsWith('data:')) return true
+  if (str.startsWith('http://') || str.startsWith('https://')) {
+    return /\.(jpeg|jpg|png|gif|webp|bmp)(\?|$)/i.test(str) || str.includes('text_to_image')
+  }
+  return false
+}
 
 function StoryCardPage() {
   const { id } = useParams<{ id: string }>()
@@ -13,6 +22,10 @@ function StoryCardPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+
+  const [selectedEvidenceIds, setSelectedEvidenceIds] = useState<(string | number)[]>([])
+  const [savingEvidence, setSavingEvidence] = useState(false)
+  const [evidenceSaved, setEvidenceSaved] = useState(false)
 
   const [formData, setFormData] = useState<StoryCard>({
     id: '',
@@ -38,6 +51,12 @@ function StoryCardPage() {
           const storyData = await storyCardApi.getStoryCard(id)
           setStoryCard(storyData)
           setFormData(storyData)
+          try {
+            const evidence = await storyCardApi.getStoryEvidence(id)
+            setSelectedEvidenceIds(evidence.map((a) => a.id))
+          } catch {
+            setSelectedEvidenceIds([])
+          }
         } catch (storyErr: any) {
           if (storyErr.response?.status === 404) {
             setStoryCard(null)
@@ -126,6 +145,28 @@ function StoryCardPage() {
       setError(err.message || '保存失败')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const toggleEvidence = (attId: string | number) => {
+    setSelectedEvidenceIds((prev) =>
+      prev.includes(attId) ? prev.filter((i) => i !== attId) : [...prev, attId]
+    )
+    setEvidenceSaved(false)
+  }
+
+  const handleSaveEvidence = async () => {
+    if (!id) return
+    try {
+      setSavingEvidence(true)
+      setError(null)
+      await storyCardApi.setStoryEvidence(id, selectedEvidenceIds)
+      setEvidenceSaved(true)
+      setTimeout(() => setEvidenceSaved(false), 2000)
+    } catch (err: any) {
+      setError(err.message || '保存佐证资料失败')
+    } finally {
+      setSavingEvidence(false)
     }
   }
 
@@ -238,6 +279,72 @@ function StoryCardPage() {
               onChange={(e) => handleChange('recorded_by', e.target.value)}
               placeholder="是谁记录的这个故事"
             />
+          </div>
+        </div>
+
+        <div className="form-section evidence-section">
+          <label className="form-label">
+            <span className="label-icon">🗂️</span>
+            故事佐证资料
+            <span className="evidence-count-badge">已选 {selectedEvidenceIds.length}</span>
+          </label>
+          <p className="evidence-hint">
+            从该旧物已登记的资料附件中勾选，作为本故事的佐证资料（影像、票据、口述等均可）。
+          </p>
+          {(item.attachments || []).length > 0 ? (
+            <div className="evidence-pick-list">
+              {(item.attachments || []).map((att) => {
+                const meta =
+                  ATTACHMENT_TYPE_META[att.attachment_type] || { icon: '📎', color: '#a08060' }
+                const checked = selectedEvidenceIds.includes(att.id)
+                return (
+                  <label
+                    key={att.id}
+                    className={`evidence-pick-item ${checked ? 'checked' : ''}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleEvidence(att.id)}
+                    />
+                    <span className="evidence-pick-thumb">
+                      {isAttachmentImageLike(att.url) ? (
+                        <img src={att.url} alt={att.title} loading="lazy" />
+                      ) : (
+                        <span className="evidence-pick-icon">{meta.icon}</span>
+                      )}
+                    </span>
+                    <span className="evidence-pick-info">
+                      <span className="evidence-pick-title">{att.title}</span>
+                      <span className="evidence-pick-type">
+                        {meta.icon} {att.attachment_type}
+                        {att.is_public ? '' : ' · 私密'}
+                      </span>
+                      {att.capture_time && (
+                        <span className="evidence-pick-time">{att.capture_time}</span>
+                      )}
+                    </span>
+                  </label>
+                )
+              })}
+            </div>
+          ) : (
+            <p className="evidence-empty">
+              该旧物暂无资料附件，请先在旧物详情页登记附件后再来关联。
+            </p>
+          )}
+          <div className="evidence-actions">
+            {!storyCard && (
+              <span className="evidence-warn">需先保存故事卡后才能保存佐证资料选择</span>
+            )}
+            {evidenceSaved && <span className="evidence-save-tip">✓ 佐证资料已保存</span>}
+            <button
+              className="save-btn outline"
+              onClick={handleSaveEvidence}
+              disabled={savingEvidence || !storyCard}
+            >
+              {savingEvidence ? '保存中...' : '保存佐证资料选择'}
+            </button>
           </div>
         </div>
 

@@ -57,6 +57,38 @@ export interface Discussion {
   created_at?: string;
 }
 
+export const ATTACHMENT_TYPES = [
+  '实物照片',
+  '修补前后对比图',
+  '票据凭证',
+  '音频口述链接',
+  '扫描文档链接',
+] as const
+
+export const IMAGE_ATTACHMENT_TYPES = ['实物照片', '修补前后对比图']
+
+export const ATTACHMENT_TYPE_META: Record<string, { icon: string; color: string }> = {
+  实物照片: { icon: '📷', color: '#8b6914' },
+  修补前后对比图: { icon: '🔧', color: '#c25a3a' },
+  票据凭证: { icon: '🧾', color: '#6b8cae' },
+  音频口述链接: { icon: '🎙️', color: '#9b7bb8' },
+  扫描文档链接: { icon: '📄', color: '#5a8f5a' },
+}
+
+export interface ItemAttachment {
+  id: string | number;
+  item_id: string | number;
+  attachment_type: string;
+  title: string;
+  url: string;
+  capture_time?: string;
+  uploader?: string;
+  remark?: string;
+  is_public: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface HeirloomItem {
   id: string | number;
   name: string;
@@ -74,6 +106,7 @@ export interface HeirloomItem {
   storage_location?: StorageLocation;
   intentions: InheritanceIntention[];
   discussions: Discussion[];
+  attachments: ItemAttachment[];
 }
 
 export interface CategoryDistributionItem {
@@ -101,6 +134,17 @@ export interface ActiveDiscussionItem {
   last_discussion_at?: string;
 }
 
+export interface AttachmentTypeDistributionItem {
+  attachment_type: string;
+  count: number;
+  percentage?: number;
+}
+
+export interface TopAttachmentContributor {
+  uploader: string;
+  count: number;
+}
+
 export interface StatisticsResponse {
   confirmed_inheritance_count: number;
   category_distribution: CategoryDistributionItem[];
@@ -111,6 +155,10 @@ export interface StatisticsResponse {
   no_discussion_count: number;
   negotiated_count: number;
   active_discussion_items: ActiveDiscussionItem[];
+  total_attachments: number;
+  attachment_type_distribution: AttachmentTypeDistributionItem[];
+  items_without_image_attachments_count: number;
+  top_attachment_contributors: TopAttachmentContributor[];
 }
 
 export interface DiscussionFilterParams {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { statisticsApi } from '../services/api'
-import { StatisticsResponse } from '../types'
+import { StatisticsResponse, ATTACHMENT_TYPE_META } from '../types'
 import './StatisticsPage.css'
 
 const RECIPIENT_COLORS = [
@@ -81,6 +81,14 @@ function StatisticsPage() {
     ...stats.active_discussion_items.map((i) => i.discussion_count),
     1
   )
+  const maxTypeCount = Math.max(
+    ...stats.attachment_type_distribution.map((t) => t.count),
+    1
+  )
+  const maxContributorCount = Math.max(
+    ...stats.top_attachment_contributors.map((c) => c.count),
+    1
+  )
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return ''
@@ -137,6 +145,22 @@ function StatisticsPage() {
           <div className="overview-info">
             <span className="overview-number no-discussion">{stats.no_discussion_count}</span>
             <span className="overview-label">仍无讨论</span>
+          </div>
+        </div>
+        <div className="overview-card">
+          <div className="overview-icon">🗂️</div>
+          <div className="overview-info">
+            <span className="overview-number">{stats.total_attachments}</span>
+            <span className="overview-label">资料附件总数</span>
+          </div>
+        </div>
+        <div className="overview-card">
+          <div className="overview-icon">📷</div>
+          <div className="overview-info">
+            <span className="overview-number no-discussion">
+              {stats.items_without_image_attachments_count}
+            </span>
+            <span className="overview-label">缺少影像资料</span>
           </div>
         </div>
       </div>
@@ -261,6 +285,79 @@ function StatisticsPage() {
           ) : (
             <div className="empty-state small-padding">
               <p>暂无待确认的传承意向</p>
+            </div>
+          )}
+        </div>
+
+        <div className="chart-card">
+          <h3 className="chart-title">🗂️ 各资料类型占比</h3>
+          {stats.attachment_type_distribution.length > 0 ? (
+            <div className="category-chart">
+              {stats.attachment_type_distribution.map((item) => {
+                const meta = ATTACHMENT_TYPE_META[item.attachment_type] || {
+                  icon: '📎',
+                  color: '#a08060',
+                }
+                const percent =
+                  stats.total_attachments > 0
+                    ? Math.round((item.count / stats.total_attachments) * 100)
+                    : 0
+                return (
+                  <div key={item.attachment_type} className="category-row">
+                    <span className="category-name">
+                      {meta.icon} {item.attachment_type}
+                    </span>
+                    <div className="category-bar-container">
+                      <div
+                        className="category-bar"
+                        style={{
+                          width: `${(item.count / maxTypeCount) * 100}%`,
+                          backgroundColor: meta.color,
+                        }}
+                      ></div>
+                    </div>
+                    <span className="category-count">
+                      {item.count} · {percent}%
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="empty-state small-padding">
+              <p>暂无资料附件</p>
+            </div>
+          )}
+        </div>
+
+        <div className="chart-card">
+          <h3 className="chart-title">🏆 资料补充最活跃成员 TOP 5</h3>
+          {stats.top_attachment_contributors.length > 0 ? (
+            <div className="member-chart">
+              {stats.top_attachment_contributors.map((item, index) => (
+                <div key={item.uploader} className="member-row">
+                  <span className="member-rank">{index + 1}</span>
+                  <div className="member-avatar">{item.uploader.charAt(0)}</div>
+                  <div className="member-info">
+                    <span className="member-name">{item.uploader}</span>
+                    <span className="member-relation">资料上传人</span>
+                  </div>
+                  <div className="member-bar-container">
+                    <div
+                      className="member-bar"
+                      style={{
+                        width: `${(item.count / maxContributorCount) * 100}%`,
+                        backgroundColor: RECIPIENT_COLORS[index % RECIPIENT_COLORS.length],
+                      }}
+                    ></div>
+                  </div>
+                  <span className="member-count">{item.count} 份</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state small-padding">
+              <p>暂无资料上传记录</p>
             </div>
           )}
         </div>

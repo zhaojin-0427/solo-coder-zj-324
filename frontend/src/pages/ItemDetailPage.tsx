@@ -1,18 +1,30 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { itemsApi, repairRecordsApi, storageApi, intentionsApi, discussionsApi } from '../services/api'
+import { itemsApi, repairRecordsApi, storageApi, intentionsApi, discussionsApi, attachmentsApi } from '../services/api'
 import {
   HeirloomItem,
   RepairRecord,
   StorageLocation,
   InheritanceIntention,
   Discussion,
+  ItemAttachment,
+  ATTACHMENT_TYPES,
+  ATTACHMENT_TYPE_META,
 } from '../types'
 import './ItemDetailPage.css'
 
 function isImageUrl(str?: string): boolean {
   if (!str) return false
   return str.startsWith('http://') || str.startsWith('https://') || str.startsWith('data:')
+}
+
+function isAttachmentImageLike(str?: string): boolean {
+  if (!str) return false
+  if (str.startsWith('data:')) return true
+  if (str.startsWith('http://') || str.startsWith('https://')) {
+    return /\.(jpeg|jpg|png|gif|webp|bmp)(\?|$)/i.test(str) || str.includes('text_to_image')
+  }
+  return false
 }
 
 function getConditionColor(condition: string): string {
@@ -59,6 +71,19 @@ function ItemDetailPage() {
 
   const [filterAuthor, setFilterAuthor] = useState('')
   const [filterKeyword, setFilterKeyword] = useState('')
+
+  const [showAttachmentModal, setShowAttachmentModal] = useState(false)
+  const [attachmentForm, setAttachmentForm] = useState<Partial<ItemAttachment>>({
+    attachment_type: '实物照片',
+    title: '',
+    url: '',
+    capture_time: '',
+    uploader: '',
+    remark: '',
+    is_public: true,
+  })
+  const [attachmentVisibility, setAttachmentVisibility] = useState<'all' | 'public' | 'private'>('all')
+  const [selectedAttachment, setSelectedAttachment] = useState<ItemAttachment | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -195,6 +220,77 @@ function ItemDetailPage() {
       setSubmittingComment(false)
     }
   }
+
+  const handleSubmitAttachment = async () => {
+    if (!id) return
+    if (!attachmentForm.title?.trim() || !attachmentForm.url?.trim()) {
+      setError('请填写附件名称和链接')
+      return
+    }
+    try {
+      setSubmitting(true)
+      setError(null)
+      await attachmentsApi.createAttachment(id, attachmentForm)
+      const data = await itemsApi.getItem(id)
+      setItem(data)
+      setShowAttachmentModal(false)
+      setAttachmentForm({
+        attachment_type: '实物照片',
+        title: '',
+        url: '',
+        capture_time: '',
+        uploader: '',
+        remark: '',
+        is_public: true,
+      })
+    } catch (err: any) {
+      setError(err.message || '添加资料附件失败')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleDeleteAttachment = async (attachmentId: string | number) => {
+    if (!id) return
+    if (!window.confirm('确定要删除该资料附件吗？')) return
+    try {
+      setSubmitting(true)
+      setError(null)
+      await attachmentsApi.deleteAttachment(id, attachmentId)
+      const data = await itemsApi.getItem(id)
+      setItem(data)
+      setSelectedAttachment(null)
+    } catch (err: any) {
+      setError(err.message || '删除资料附件失败')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const openAttachmentModal = () => {
+    setAttachmentForm({
+      attachment_type: '实物照片',
+      title: '',
+      url: '',
+      capture_time: '',
+      uploader: '',
+      remark: '',
+      is_public: true,
+    })
+    setShowAttachmentModal(true)
+  }
+
+  const filteredAttachments = (item?.attachments || []).filter((a) => {
+    if (attachmentVisibility === 'public') return a.is_public
+    if (attachmentVisibility === 'private') return !a.is_public
+    return true
+  })
+
+  const groupedAttachments = ATTACHMENT_TYPES.map((type) => ({
+    type,
+    meta: ATTACHMENT_TYPE_META[type] || { icon: '📎', color: '#a08060' },
+    items: filteredAttachments.filter((a) => a.attachment_type === type),
+  })).filter((g) => g.items.length > 0)
 
   const sortedIntentions = (item?.intentions || []).slice().sort((a, b) => b.version - a.version)
   const finalIntention = sortedIntentions.find((i) => i.is_final) || null
@@ -623,6 +719,90 @@ function ItemDetailPage() {
             )}
           </div>
 
+          <div className="info-section">
+            <div className="section-header">
+              <h3 className="section-title">📎 资料附件</h3>
+              <span className="discussion-count-badge">
+                共 {item.attachments?.length || 0} 项
+              </span>
+            </div>
+
+            <div className="attachment-filter-bar">
+              <div className="attachment-visibility-tabs">
+                <button
+                  className={`visibility-tab ${attachmentVisibility === 'all' ? 'active' : ''}`}
+                  onClick={() => setAttachmentVisibility('all')}
+                >
+                  全部 ({(item.attachments || []).length})
+                </button>
+                <button
+                  className={`visibility-tab ${attachmentVisibility === 'public' ? 'active' : ''}`}
+                  onClick={() => setAttachmentVisibility('public')}
+                >
+                  🔓 公开 ({(item.attachments || []).filter((a) => a.is_public).length})
+                </button>
+                <button
+                  className={`visibility-tab ${attachmentVisibility === 'private' ? 'active' : ''}`}
+                  onClick={() => setAttachmentVisibility('private')}
+                >
+                  🔒 私密 ({(item.attachments || []).filter((a) => !a.is_public).length})
+                </button>
+              </div>
+              <button className="action-btn secondary small" onClick={openAttachmentModal}>
+                + 添加资料附件
+              </button>
+            </div>
+
+            {groupedAttachments.length > 0 ? (
+              <div className="attachment-group-list">
+                {groupedAttachments.map((group) => (
+                  <div key={group.type} className="attachment-group">
+                    <div className="attachment-group-header">
+                      <span className="attachment-type-icon">{group.meta.icon}</span>
+                      <span className="attachment-group-name">{group.type}</span>
+                      <span className="attachment-group-count">{group.items.length}</span>
+                    </div>
+                    <div className="attachment-grid">
+                      {group.items.map((att) => (
+                        <div
+                          key={att.id}
+                          className={`attachment-card ${att.is_public ? '' : 'is-private'}`}
+                          onClick={() => setSelectedAttachment(att)}
+                        >
+                          <div className="attachment-thumb">
+                            {isAttachmentImageLike(att.url) ? (
+                              <img src={att.url} alt={att.title} loading="lazy" />
+                            ) : (
+                              <span className="attachment-thumb-icon">{group.meta.icon}</span>
+                            )}
+                            <span className="attachment-privacy-badge">
+                              {att.is_public ? '🔓' : '🔒'}
+                            </span>
+                          </div>
+                          <div className="attachment-card-body">
+                            <p className="attachment-card-title">{att.title}</p>
+                            <p className="attachment-card-meta">
+                              {att.capture_time || '未标注时间'}
+                            </p>
+                            <p className="attachment-card-uploader">
+                              上传人：{att.uploader || '未标注'}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="empty-text">
+                {(item.attachments || []).length === 0
+                  ? '暂无资料附件，点击右上角添加'
+                  : '当前筛选条件下无资料附件'}
+              </p>
+            )}
+          </div>
+
           {item.story_card && (
             <div className="info-section">
               <h3 className="section-title">📖 故事卡摘要</h3>
@@ -820,6 +1000,175 @@ function ItemDetailPage() {
                 disabled={submitting}
               >
                 {submitting ? '提交中...' : '提交'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAttachmentModal && (
+        <div className="modal-overlay" onClick={() => setShowAttachmentModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2 className="modal-title">添加资料附件</h2>
+            <div className="form-group">
+              <label>资料类型 *</label>
+              <select
+                className="form-input"
+                value={attachmentForm.attachment_type || '实物照片'}
+                onChange={(e) =>
+                  setAttachmentForm({ ...attachmentForm, attachment_type: e.target.value })
+                }
+              >
+                {ATTACHMENT_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>附件名称 *</label>
+              <input
+                type="text"
+                className="form-input"
+                value={attachmentForm.title || ''}
+                onChange={(e) => setAttachmentForm({ ...attachmentForm, title: e.target.value })}
+                placeholder="如：怀表正面特写"
+              />
+            </div>
+            <div className="form-group">
+              <label>链接 / 图片地址 *</label>
+              <input
+                type="text"
+                className="form-input"
+                value={attachmentForm.url || ''}
+                onChange={(e) => setAttachmentForm({ ...attachmentForm, url: e.target.value })}
+                placeholder="图片URL、音频口述链接或扫描文档链接"
+              />
+            </div>
+            <div className="form-group">
+              <label>拍摄 / 形成时间</label>
+              <input
+                type="date"
+                className="form-input"
+                value={attachmentForm.capture_time || ''}
+                onChange={(e) =>
+                  setAttachmentForm({ ...attachmentForm, capture_time: e.target.value })
+                }
+              />
+            </div>
+            <div className="form-group">
+              <label>上传人</label>
+              <input
+                type="text"
+                className="form-input"
+                value={attachmentForm.uploader || ''}
+                onChange={(e) =>
+                  setAttachmentForm({ ...attachmentForm, uploader: e.target.value })
+                }
+                placeholder="请输入上传人姓名"
+              />
+            </div>
+            <div className="form-group">
+              <label>说明备注</label>
+              <textarea
+                className="form-textarea"
+                rows={2}
+                value={attachmentForm.remark || ''}
+                onChange={(e) => setAttachmentForm({ ...attachmentForm, remark: e.target.value })}
+                placeholder="补充说明，如拍摄背景、凭证金额等"
+              />
+            </div>
+            <div className="form-group">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={attachmentForm.is_public ?? true}
+                  onChange={(e) =>
+                    setAttachmentForm({ ...attachmentForm, is_public: e.target.checked })
+                  }
+                />
+                <span>对全家公开（不勾选则作为私密资料，仅自己可见）</span>
+              </label>
+            </div>
+            <div className="modal-actions">
+              <button
+                className="btn-secondary"
+                onClick={() => setShowAttachmentModal(false)}
+                disabled={submitting}
+              >
+                取消
+              </button>
+              <button
+                className="btn-primary"
+                onClick={handleSubmitAttachment}
+                disabled={submitting}
+              >
+                {submitting ? '提交中...' : '提交'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedAttachment && (
+        <div className="modal-overlay" onClick={() => setSelectedAttachment(null)}>
+          <div className="modal-content attachment-detail-modal" onClick={(e) => e.stopPropagation()}>
+            <h2 className="modal-title">{selectedAttachment.title}</h2>
+            <div className="attachment-detail-preview">
+              {isAttachmentImageLike(selectedAttachment.url) ? (
+                <img src={selectedAttachment.url} alt={selectedAttachment.title} />
+              ) : (
+                <a
+                  href={selectedAttachment.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="attachment-link-card"
+                >
+                  🔗 打开链接查看：{selectedAttachment.url}
+                </a>
+              )}
+            </div>
+            <div className="attachment-detail-meta">
+              <div className="final-row">
+                <span className="final-label">资料类型</span>
+                <span className="final-value">{selectedAttachment.attachment_type}</span>
+              </div>
+              <div className="final-row">
+                <span className="final-label">形成时间</span>
+                <span className="final-value">
+                  {selectedAttachment.capture_time || '未标注'}
+                </span>
+              </div>
+              <div className="final-row">
+                <span className="final-label">上传人</span>
+                <span className="final-value">
+                  {selectedAttachment.uploader || '未标注'}
+                </span>
+              </div>
+              <div className="final-row">
+                <span className="final-label">可见性</span>
+                <span className="final-value">
+                  {selectedAttachment.is_public ? '🔓 对全家公开' : '🔒 私密资料'}
+                </span>
+              </div>
+              {selectedAttachment.remark && (
+                <div className="final-section">
+                  <h4 className="final-subtitle">说明备注</h4>
+                  <p className="final-text">{selectedAttachment.remark}</p>
+                </div>
+              )}
+            </div>
+            <div className="modal-actions">
+              <button className="btn-secondary" onClick={() => setSelectedAttachment(null)}>
+                关闭
+              </button>
+              <button
+                className="btn-primary danger"
+                onClick={() => handleDeleteAttachment(selectedAttachment.id)}
+                disabled={submitting}
+              >
+                {submitting ? '删除中...' : '删除附件'}
               </button>
             </div>
           </div>

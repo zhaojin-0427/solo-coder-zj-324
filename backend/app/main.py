@@ -2,8 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base, SessionLocal
 from . import models
-from .routers import items, story_cards, inheritance, discussions, statistics
-from .models import FamilyMember, HeirloomItem, StoryCard, RepairRecord, StorageLocation, InheritanceIntention, Discussion
+from .routers import items, story_cards, inheritance, discussions, statistics, attachments
+from .models import FamilyMember, HeirloomItem, StoryCard, RepairRecord, StorageLocation, InheritanceIntention, Discussion, ItemAttachment
 
 Base.metadata.create_all(bind=engine)
 
@@ -22,6 +22,7 @@ app.include_router(story_cards.router, prefix="/api", tags=["story_cards"])
 app.include_router(inheritance.router, prefix="/api", tags=["inheritance"])
 app.include_router(discussions.router, prefix="/api", tags=["discussions"])
 app.include_router(statistics.router, prefix="/api", tags=["statistics"])
+app.include_router(attachments.router, prefix="/api", tags=["attachments"])
 
 
 def init_seed_data():
@@ -208,9 +209,93 @@ def init_seed_data():
         db.close()
 
 
+def init_attachment_seed_data():
+    db = SessionLocal()
+    try:
+        if db.query(ItemAttachment).count() > 0:
+            return
+
+        items_list = db.query(HeirloomItem).order_by(HeirloomItem.id).all()
+        if not items_list:
+            return
+
+        attachments_list = []
+        if len(items_list) > 0:
+            item = items_list[0]
+            attachments_list.extend([
+                ItemAttachment(item_id=item.id, attachment_type="实物照片",
+                               title="怀表正面特写",
+                               url="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=antique%20pocket%20watch%20close%20up%20brass%20vintage&image_size=square",
+                               capture_time="2021-06-10", uploader="爸爸", remark="清晨自然光下拍摄",
+                               is_public=True),
+                ItemAttachment(item_id=item.id, attachment_type="修补前后对比图",
+                               title="机芯保养前后对比",
+                               url="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=pocket%20watch%20mechanism%20repair%20before%20after&image_size=landscape_16_9",
+                               capture_time="2020-05-15", uploader="爸爸", remark="老字号钟表店保养记录",
+                               is_public=True),
+                ItemAttachment(item_id=item.id, attachment_type="票据凭证",
+                               title="钟表保养收据",
+                               url="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=handwritten%20chinese%20receipt%20paper%20vintage&image_size=square",
+                               capture_time="2020-05-15", uploader="爸爸", remark="保养费用 300 元凭证",
+                               is_public=False),
+                ItemAttachment(item_id=item.id, attachment_type="音频口述链接",
+                               title="爷爷讲述怀表来历",
+                               url="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=vintage%20cassette%20tape%20recorder%20oral%20history&image_size=square",
+                               capture_time="2022-03-08", uploader="小明", remark="录音时长 8 分钟",
+                               is_public=True),
+            ])
+
+        if len(items_list) > 1:
+            item = items_list[1]
+            attachments_list.extend([
+                ItemAttachment(item_id=item.id, attachment_type="实物照片",
+                               title="青花瓷瓶全景",
+                               url="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=blue%20and%20white%20porcelain%20vase%20qing%20dynasty&image_size=portrait_4_3",
+                               capture_time="2021-09-20", uploader="妈妈", remark="客厅博古架陈列照",
+                               is_public=True),
+                ItemAttachment(item_id=item.id, attachment_type="扫描文档链接",
+                               title="陪嫁礼单扫描件",
+                               url="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=old%20chinese%20wedding%20gift%20list%20document%20scan&image_size=portrait_4_3",
+                               capture_time="1958-01-01", uploader="奶奶", remark="记录瓷瓶传承来源",
+                               is_public=True),
+            ])
+
+        if len(items_list) > 3:
+            item = items_list[3]
+            attachments_list.extend([
+                ItemAttachment(item_id=item.id, attachment_type="修补前后对比图",
+                               title="红木椅加固修复对比",
+                               url="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=rosewood%20chair%20restoration%20before%20after&image_size=landscape_16_9",
+                               capture_time="2019-08-20", uploader="爷爷", remark="王师傅加固松动部位",
+                               is_public=True),
+                ItemAttachment(item_id=item.id, attachment_type="票据凭证",
+                               title="木工修缮工费单",
+                               url="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=handwritten%20woodwork%20receipt%20chinese%20vintage&image_size=square",
+                               capture_time="2019-08-20", uploader="爷爷", remark="工费 800 元",
+                               is_public=False),
+            ])
+
+        if len(items_list) > 2:
+            item = items_list[2]
+            attachments_list.extend([
+                ItemAttachment(item_id=item.id, attachment_type="实物照片",
+                               title="老照片集翻拍",
+                               url="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=old%20family%20photo%20album%20black%20white%20vintage&image_size=square",
+                               capture_time="2020-12-05", uploader="小红", remark="部分老照片数字化",
+                               is_public=True),
+            ])
+
+        if attachments_list:
+            db.add_all(attachments_list)
+            db.commit()
+    finally:
+        db.close()
+
+
 @app.on_event("startup")
 async def startup_event():
     init_seed_data()
+    init_attachment_seed_data()
 
 
 @app.get("/")

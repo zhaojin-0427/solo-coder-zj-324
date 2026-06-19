@@ -4,6 +4,23 @@ from sqlalchemy.sql import func
 from .database import Base
 
 
+ATTACHMENT_TYPE_PHOTO = "实物照片"
+ATTACHMENT_TYPE_REPAIR_COMPARE = "修补前后对比图"
+ATTACHMENT_TYPE_RECEIPT = "票据凭证"
+ATTACHMENT_TYPE_AUDIO = "音频口述链接"
+ATTACHMENT_TYPE_SCAN = "扫描文档链接"
+
+ATTACHMENT_TYPES = [
+    ATTACHMENT_TYPE_PHOTO,
+    ATTACHMENT_TYPE_REPAIR_COMPARE,
+    ATTACHMENT_TYPE_RECEIPT,
+    ATTACHMENT_TYPE_AUDIO,
+    ATTACHMENT_TYPE_SCAN,
+]
+
+IMAGE_ATTACHMENT_TYPES = [ATTACHMENT_TYPE_PHOTO, ATTACHMENT_TYPE_REPAIR_COMPARE]
+
+
 class FamilyMember(Base):
     __tablename__ = "family_members"
 
@@ -43,6 +60,7 @@ class HeirloomItem(Base):
     storage_location = relationship("StorageLocation", back_populates="item", uselist=False, cascade="all, delete-orphan")
     intentions = relationship("InheritanceIntention", back_populates="item", cascade="all, delete-orphan")
     discussions = relationship("Discussion", back_populates="item", cascade="all, delete-orphan")
+    attachments = relationship("ItemAttachment", back_populates="item", cascade="all, delete-orphan")
 
 
 class StoryCard(Base):
@@ -59,6 +77,7 @@ class StoryCard(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     item = relationship("HeirloomItem", back_populates="story_card")
+    story_evidence = relationship("ItemAttachment", secondary="story_card_attachments")
 
 
 class RepairRecord(Base):
@@ -115,3 +134,28 @@ class Discussion(Base):
 
     item = relationship("HeirloomItem", back_populates="discussions")
     reply_to = relationship("Discussion", remote_side=[id], backref=backref("replies", lazy="dynamic"))
+
+
+class ItemAttachment(Base):
+    __tablename__ = "item_attachments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    item_id = Column(Integer, ForeignKey("heirloom_items.id"), nullable=False)
+    attachment_type = Column(String, nullable=False)
+    title = Column(String, nullable=False)
+    url = Column(String, nullable=False)
+    capture_time = Column(String)
+    uploader = Column(String)
+    remark = Column(Text)
+    is_public = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    item = relationship("HeirloomItem", back_populates="attachments")
+
+
+class StoryCardAttachment(Base):
+    __tablename__ = "story_card_attachments"
+
+    story_card_id = Column(Integer, ForeignKey("story_cards.id"), primary_key=True)
+    attachment_id = Column(Integer, ForeignKey("item_attachments.id"), primary_key=True)

@@ -7,6 +7,7 @@ import {
   StorageLocation,
   InheritanceIntention,
   Discussion,
+  ItemAttachment,
   StatisticsResponse,
   DiscussionFilterParams,
 } from '../types'
@@ -82,6 +83,14 @@ export const storyCardApi = {
   deleteStoryCard: (itemId: string | number): Promise<void> => {
     return api.delete(`/items/${itemId}/story-card`)
   },
+
+  getStoryEvidence: (itemId: string | number): Promise<ItemAttachment[]> => {
+    return api.get(`/items/${itemId}/story-card/attachments`)
+  },
+
+  setStoryEvidence: (itemId: string | number, attachmentIds: (string | number)[]): Promise<ItemAttachment[]> => {
+    return api.put(`/items/${itemId}/story-card/attachments`, { attachment_ids: attachmentIds })
+  },
 }
 
 export const repairRecordsApi = {
@@ -101,6 +110,43 @@ export const storageApi = {
 
   updateStorageLocation: (itemId: string | number, data: Partial<StorageLocation>): Promise<StorageLocation> => {
     return api.put(`/items/${itemId}/storage`, data)
+  },
+}
+
+export interface AttachmentQueryParams {
+  attachment_type?: string
+  is_public?: boolean
+}
+
+export const attachmentsApi = {
+  getAttachments: (
+    itemId: string | number,
+    params?: AttachmentQueryParams
+  ): Promise<ItemAttachment[]> => {
+    return api.get(`/items/${itemId}/attachments`, { params })
+  },
+
+  getAttachment: (itemId: string | number, attachmentId: string | number): Promise<ItemAttachment> => {
+    return api.get(`/items/${itemId}/attachments/${attachmentId}`)
+  },
+
+  createAttachment: (
+    itemId: string | number,
+    data: Partial<ItemAttachment>
+  ): Promise<ItemAttachment> => {
+    return api.post(`/items/${itemId}/attachments`, data)
+  },
+
+  updateAttachment: (
+    itemId: string | number,
+    attachmentId: string | number,
+    data: Partial<ItemAttachment>
+  ): Promise<ItemAttachment> => {
+    return api.put(`/items/${itemId}/attachments/${attachmentId}`, data)
+  },
+
+  deleteAttachment: (itemId: string | number, attachmentId: string | number): Promise<void> => {
+    return api.delete(`/items/${itemId}/attachments/${attachmentId}`)
   },
 }
 
