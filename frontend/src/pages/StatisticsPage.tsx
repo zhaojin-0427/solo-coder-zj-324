@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { statisticsApi } from '../services/api'
 import { StatisticsResponse } from '../types'
 import './StatisticsPage.css'
@@ -76,17 +77,27 @@ function StatisticsPage() {
     ...stats.pending_recipient_distribution.map((r) => r.count),
     1
   )
+  const maxActiveCount = Math.max(
+    ...stats.active_discussion_items.map((i) => i.discussion_count),
+    1
+  )
 
-  const pendingCount = stats.pending_intentions_count
-  const confirmedCount = stats.confirmed_inheritance_count
-  const totalItems = stats.total_items
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return ''
+    return new Date(dateStr).toLocaleDateString('zh-CN', {
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  }
 
   return (
     <div className="statistics-page">
       <div className="page-header">
         <div>
           <h2 className="page-title">统计概览</h2>
-          <p className="page-subtitle">家族旧物档案数据一览</p>
+          <p className="page-subtitle">家族旧物档案与家庭协商闭环数据一览</p>
         </div>
       </div>
 
@@ -112,6 +123,20 @@ function StatisticsPage() {
               {stats.pending_intentions_count}
             </span>
             <span className="overview-label">待确认意向</span>
+          </div>
+        </div>
+        <div className="overview-card">
+          <div className="overview-icon">🤝</div>
+          <div className="overview-info">
+            <span className="overview-number negotiated">{stats.negotiated_count}</span>
+            <span className="overview-label">已完成协商</span>
+          </div>
+        </div>
+        <div className="overview-card">
+          <div className="overview-icon">💭</div>
+          <div className="overview-info">
+            <span className="overview-number no-discussion">{stats.no_discussion_count}</span>
+            <span className="overview-label">仍无讨论</span>
           </div>
         </div>
       </div>
@@ -159,26 +184,65 @@ function StatisticsPage() {
         </div>
 
         <div className="chart-card full-width">
+          <h3 className="chart-title">🔥 讨论活跃旧物排行 TOP 5</h3>
+          {stats.active_discussion_items.length > 0 ? (
+            <div className="active-chart">
+              {stats.active_discussion_items.map((item, index) => (
+                <div key={item.id} className="active-row">
+                  <span
+                    className="active-rank"
+                    style={{
+                      backgroundColor: index === 0 ? '#c8942e' : index < 3 ? '#a08060' : '#d0c0a8',
+                      color: '#fff9f0',
+                    }}
+                  >
+                    {index + 1}
+                  </span>
+                  <Link to={`/items/${item.id}`} className="active-name">
+                    📦 {item.name}
+                  </Link>
+                  <div className="active-bar-container">
+                    <div
+                      className="active-bar"
+                      style={{ width: `${(item.discussion_count / maxActiveCount) * 100}%` }}
+                    ></div>
+                  </div>
+                  <span className="active-count">{item.discussion_count} 条</span>
+                  {item.last_discussion_at && (
+                    <span className="active-date">
+                      最近：{formatDate(item.last_discussion_at)}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state small-padding">
+              <p>暂无讨论数据</p>
+            </div>
+          )}
+        </div>
+
+        <div className="chart-card full-width">
           <h3 className="chart-title">📋 待确认去向分布</h3>
           {stats.pending_recipient_distribution.length > 0 ? (
-            <div className="recipient-chart">
-              <div className="recipient-bars">
+            <div className="pending-chart">
+              <div className="pending-bars">
                 {stats.pending_recipient_distribution.map((item, index) => (
-                  <div key={item.recipient} className="recipient-bar-item">
+                  <div key={item.recipient} className="pending-bar-item">
                     <div
-                      className="recipient-bar"
+                      className="pending-bar"
                       style={{
                         height: `${(item.count / maxRecipientCount) * 100 * 2.5}%`,
-                        backgroundColor:
-                          RECIPIENT_COLORS[index % RECIPIENT_COLORS.length],
+                        backgroundColor: RECIPIENT_COLORS[index % RECIPIENT_COLORS.length],
                       }}
                     ></div>
-                    <span className="recipient-value">{item.count}</span>
-                    <span className="recipient-label">{item.recipient}</span>
+                    <span className="pending-value">{item.count}</span>
+                    <span className="pending-label">{item.recipient}</span>
                   </div>
                 ))}
               </div>
-              <div className="recipient-legend">
+              <div className="pending-legend">
                 {stats.pending_recipient_distribution.map((item, index) => (
                   <div key={item.recipient} className="legend-item">
                     <span
@@ -195,7 +259,7 @@ function StatisticsPage() {
               </div>
             </div>
           ) : (
-            <div className="empty-state">
+            <div className="empty-state small-padding">
               <p>暂无待确认的传承意向</p>
             </div>
           )}

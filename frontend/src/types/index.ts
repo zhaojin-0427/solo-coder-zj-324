@@ -78,6 +78,7 @@ export interface HeirloomItem {
 export interface CategoryDistributionItem {
   category: string;
   count: number;
+  percentage?: number;
 }
 
 export interface TopRelatedFamilyMember {
@@ -92,6 +93,13 @@ export interface PendingRecipientDistributionItem {
   count: number;
 }
 
+export interface ActiveDiscussionItem {
+  id: string | number;
+  name: string;
+  discussion_count: number;
+  last_discussion_at?: string;
+}
+
 export interface StatisticsResponse {
   confirmed_inheritance_count: number;
   category_distribution: CategoryDistributionItem[];
@@ -99,4 +107,13 @@ export interface StatisticsResponse {
   pending_intentions_count: number;
   total_items: number;
   pending_recipient_distribution: PendingRecipientDistributionItem[];
+  no_discussion_count: number;
+  negotiated_count: number;
+  active_discussion_items: ActiveDiscussionItem[];
+}
+
+export interface DiscussionFilterParams {
+  item_id?: string | number;
+  author?: string;
+  keyword?: string;
 }

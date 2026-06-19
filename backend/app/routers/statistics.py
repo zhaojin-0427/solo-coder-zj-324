@@ -10,16 +10,16 @@ router = APIRouter()
 @router.get("/statistics", response_model=schemas.StatisticsResponse)
 def get_statistics(db: Session = Depends(get_db)):
     total_items = db.query(models.HeirloomItem).count()
-    
+
     confirmed_count = db.query(models.InheritanceIntention).filter(
         models.InheritanceIntention.is_final == True
     ).count()
-    
+
     category_query = db.query(
         models.HeirloomItem.category,
         func.count(models.HeirloomItem.id).label('count')
     ).group_by(models.HeirloomItem.category).all()
-    
+
     category_distribution = []
     for category, count in category_query:
         percentage = round((count / total_items * 100), 1) if total_items > 0 else 0
@@ -28,7 +28,7 @@ def get_statistics(db: Session = Depends(get_db)):
             count=count,
             percentage=percentage
         ))
-    
+
     member_count_query = db.query(
         models.FamilyMember.id,
         models.FamilyMember.name,
@@ -40,7 +40,7 @@ def get_statistics(db: Session = Depends(get_db)):
     ).group_by(
         models.FamilyMember.id
     ).order_by(desc('item_count')).limit(5).all()
-    
+
     top_members = []
     for member_id, name, relation, item_count in member_count_query:
         top_members.append(schemas.TopRelatedFamilyMember(
@@ -49,11 +49,11 @@ def get_statistics(db: Session = Depends(get_db)):
             relation=relation,
             count=item_count
         ))
-    
+
     pending_intentions = db.query(models.InheritanceIntention).filter(
         models.InheritanceIntention.is_final == False
     ).count()
-    
+
     pending_recipient_query = db.query(
         models.InheritanceIntention.proposed_recipient,
         func.count(models.InheritanceIntention.id).label('count')
@@ -63,7 +63,7 @@ def get_statistics(db: Session = Depends(get_db)):
     ).group_by(
         models.InheritanceIntention.proposed_recipient
     ).order_by(desc('count')).all()
-    
+
     pending_recipient_distribution = []
     for recipient, count in pending_recipient_query:
         if recipient:
@@ -71,12 +71,56 @@ def get_statistics(db: Session = Depends(get_db)):
                 recipient=recipient,
                 count=count
             ))
-    
+
+    items_with_discussion_count = db.query(
+        models.HeirloomItem.id,
+        func.count(models.Discussion.id).label('discussion_count')
+    ).outerjoin(
+        models.Discussion,
+        models.HeirloomItem.id == models.Discussion.item_id
+    ).group_by(models.HeirloomItem.id).all()
+
+    no_discussion_count = sum(1 for _, dc in items_with_discussion_count if dc == 0)
+
+    negotiated_count = db.query(models.HeirloomItem).join(
+        models.InheritanceIntention,
+        models.HeirloomItem.id == models.InheritanceIntention.item_id
+    ).filter(
+        models.InheritanceIntention.is_final == True
+    ).distinct().count()
+
+    active_discussion_query = db.query(
+        models.HeirloomItem.id,
+        models.HeirloomItem.name,
+        func.count(models.Discussion.id).label('discussion_count'),
+        func.max(models.Discussion.created_at).label('last_discussion_at')
+    ).outerjoin(
+        models.Discussion,
+        models.HeirloomItem.id == models.Discussion.item_id
+    ).group_by(
+        models.HeirloomItem.id,
+        models.HeirloomItem.name
+    ).having(
+        func.count(models.Discussion.id) > 0
+    ).order_by(desc('discussion_count')).limit(5).all()
+
+    active_discussion_items = []
+    for item_id, name, discussion_count, last_discussion_at in active_discussion_query:
+        active_discussion_items.append(schemas.ActiveDiscussionItem(
+            id=item_id,
+            name=name,
+            discussion_count=discussion_count,
+            last_discussion_at=last_discussion_at
+        ))
+
     return schemas.StatisticsResponse(
         confirmed_inheritance_count=confirmed_count,
         category_distribution=category_distribution,
         top_related_family_members=top_members,
         pending_intentions_count=pending_intentions,
         total_items=total_items,
-        pending_recipient_distribution=pending_recipient_distribution
+        pending_recipient_distribution=pending_recipient_distribution,
+        no_discussion_count=no_discussion_count,
+        negotiated_count=negotiated_count,
+        active_discussion_items=active_discussion_items
     )

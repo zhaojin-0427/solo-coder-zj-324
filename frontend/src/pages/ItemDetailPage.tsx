@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { itemsApi, repairRecordsApi, storageApi } from '../services/api'
-import { HeirloomItem, RepairRecord, StorageLocation } from '../types'
+import { itemsApi, repairRecordsApi, storageApi, intentionsApi, discussionsApi } from '../services/api'
+import {
+  HeirloomItem,
+  RepairRecord,
+  StorageLocation,
+  InheritanceIntention,
+  Discussion,
+} from '../types'
 import './ItemDetailPage.css'
 
 function isImageUrl(str?: string): boolean {
@@ -26,6 +32,7 @@ function ItemDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [showRepairModal, setShowRepairModal] = useState(false)
   const [showStorageModal, setShowStorageModal] = useState(false)
+  const [showIntentionModal, setShowIntentionModal] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
   const [repairForm, setRepairForm] = useState<Partial<RepairRecord>>({
@@ -40,6 +47,18 @@ function ItemDetailPage() {
     location: '',
     details: '',
   })
+
+  const [intentionForm, setIntentionForm] = useState({
+    proposed_by: '',
+    proposed_recipient: '',
+    reason: '',
+  })
+
+  const [newComment, setNewComment] = useState('')
+  const [submittingComment, setSubmittingComment] = useState(false)
+
+  const [filterAuthor, setFilterAuthor] = useState('')
+  const [filterKeyword, setFilterKeyword] = useState('')
 
   useEffect(() => {
     if (!id) return
@@ -110,6 +129,105 @@ function ItemDetailPage() {
     }
   }
 
+  const getNextVersion = (): number => {
+    if (!item) return 1
+    const intentions = item.intentions || []
+    if (intentions.length === 0) return 1
+    const maxVersion = intentions.reduce((max, curr) => Math.max(max, curr.version), 0)
+    return maxVersion + 1
+  }
+
+  const handleSubmitIntention = async () => {
+    if (!id) return
+    if (!intentionForm.proposed_by.trim() || !intentionForm.proposed_recipient.trim()) {
+      setError('请填写提议人和预期传承人')
+      return
+    }
+    try {
+      setSubmitting(true)
+      setError(null)
+      const version = getNextVersion()
+      await intentionsApi.createIntention(id, {
+        ...intentionForm,
+        version,
+      })
+      const data = await itemsApi.getItem(id)
+      setItem(data)
+      setShowIntentionModal(false)
+      setIntentionForm({ proposed_by: '', proposed_recipient: '', reason: '' })
+    } catch (err: any) {
+      setError(err.message || '创建传承意向失败')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleConfirmIntention = async (intentionId: string | number) => {
+    if (!id) return
+    try {
+      setSubmitting(true)
+      setError(null)
+      await intentionsApi.confirmIntention(id, intentionId)
+      const data = await itemsApi.getItem(id)
+      setItem(data)
+    } catch (err: any) {
+      setError(err.message || '确认传承意向失败')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleSubmitComment = async () => {
+    if (!id || !newComment.trim()) return
+    try {
+      setSubmittingComment(true)
+      setError(null)
+      await discussionsApi.addDiscussion(id, {
+        content: newComment.trim(),
+        author: '当前用户',
+      })
+      setNewComment('')
+      const data = await itemsApi.getItem(id)
+      setItem(data)
+    } catch (err: any) {
+      setError(err.message || '发表评论失败')
+    } finally {
+      setSubmittingComment(false)
+    }
+  }
+
+  const sortedIntentions = (item?.intentions || []).slice().sort((a, b) => b.version - a.version)
+  const finalIntention = sortedIntentions.find((i) => i.is_final) || null
+  const hasConfirmed = !!finalIntention
+
+  const allAuthors = Array.from(
+    new Set((item?.discussions || []).map((d) => d.author).filter(Boolean))
+  )
+
+  const displayedDiscussions = (item?.discussions || []).filter((d) => {
+    if (filterAuthor && d.author !== filterAuthor) return false
+    if (filterKeyword && !d.content.includes(filterKeyword)) return false
+    return true
+  })
+
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return ''
+    return new Date(dateStr).toLocaleDateString('zh-CN')
+  }
+
+  const formatDateTime = (dateStr?: string) => {
+    if (!dateStr) return ''
+    return new Date(dateStr).toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  }
+
+  const hasActiveDiscussionFilter = filterAuthor !== '' || filterKeyword.trim() !== ''
+
   if (loading) {
     return (
       <div className="item-detail-page">
@@ -145,7 +263,9 @@ function ItemDetailPage() {
   return (
     <div className="item-detail-page">
       <div className="detail-header">
-        <Link to="/items" className="back-link">← 返回列表</Link>
+        <Link to="/items" className="back-link">
+          ← 返回列表
+        </Link>
         <div className="detail-actions">
           <Link to={`/story-card/${item.id}`} className="action-btn primary">
             编辑故事卡
@@ -182,6 +302,33 @@ function ItemDetailPage() {
               状态：{item.condition || '未标注'}
             </span>
           </div>
+
+          <div className="negotiation-status">
+            <h4 className="section-title-sm">📊 协商状态</h4>
+            <div className="status-grid">
+              <div className="status-mini-card">
+                <span className="status-num">{item.discussions?.length || 0}</span>
+                <span className="status-label">讨论数</span>
+              </div>
+              <div className="status-mini-card">
+                <span className="status-num">{sortedIntentions.length}</span>
+                <span className="status-label">意向版本</span>
+              </div>
+              <div className="status-mini-card">
+                {hasConfirmed ? (
+                  <>
+                    <span className="status-num confirmed">✓</span>
+                    <span className="status-label">已确认</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="status-num pending">...</span>
+                    <span className="status-label">协商中</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="detail-info-section">
@@ -201,6 +348,224 @@ function ItemDetailPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {hasConfirmed && finalIntention && (
+            <div className="info-section final-result">
+              <div className="section-header">
+                <h3 className="section-title">✅ 最终确认传承结果</h3>
+                <span className="final-badge">v{finalIntention.version} 最终版</span>
+              </div>
+              <div className="final-card">
+                <div className="final-row">
+                  <span className="final-label">提议人</span>
+                  <span className="final-value">{finalIntention.proposed_by}</span>
+                </div>
+                <div className="final-row">
+                  <span className="final-label">传承人</span>
+                  <span className="final-value highlight">
+                    🏆 {finalIntention.proposed_recipient}
+                  </span>
+                </div>
+                {finalIntention.reason && (
+                  <div className="final-section">
+                    <h4 className="final-subtitle">传承理由</h4>
+                    <p className="final-text">{finalIntention.reason}</p>
+                  </div>
+                )}
+                <div className="final-row">
+                  <span className="final-label">确认时间</span>
+                  <span className="final-value">
+                    {formatDateTime(finalIntention.created_at)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="info-section">
+            <div className="section-header">
+              <h3 className="section-title">📜 传承意向历史</h3>
+              {!hasConfirmed && (
+                <button
+                  className="action-btn secondary small"
+                  onClick={() => {
+                    setIntentionForm({ proposed_by: '', proposed_recipient: '', reason: '' })
+                    setShowIntentionModal(true)
+                  }}
+                >
+                  + 提出新去向
+                </button>
+              )}
+            </div>
+            {sortedIntentions.length > 0 ? (
+              <div className="intention-history">
+                {sortedIntentions.map((intention) => (
+                  <div
+                    key={intention.id}
+                    className={`intention-history-item ${intention.is_final ? 'is-final' : ''}`}
+                  >
+                    <div className="intention-header">
+                      <div className="intention-version">
+                        <span className="version-badge">v{intention.version}</span>
+                        {intention.is_final && (
+                          <span className="version-tag final">最终确认</span>
+                        )}
+                      </div>
+                      <span className="intention-date">
+                        {formatDate(intention.created_at)}
+                      </span>
+                    </div>
+                    <div className="intention-body">
+                      <div className="intention-row">
+                        <span className="intention-k">提议人：</span>
+                        <span className="intention-v">{intention.proposed_by}</span>
+                      </div>
+                      {intention.proposed_recipient && (
+                        <div className="intention-row">
+                          <span className="intention-k">传承人：</span>
+                          <span className="intention-v">{intention.proposed_recipient}</span>
+                        </div>
+                      )}
+                      {intention.reason && (
+                        <div className="intention-reason">
+                          <span className="intention-k">理由：</span>
+                          <p className="intention-text">{intention.reason}</p>
+                        </div>
+                      )}
+                    </div>
+                    {!hasConfirmed && !intention.is_final && (
+                      <div className="intention-actions">
+                        <button
+                          className="confirm-intention-btn"
+                          onClick={() => handleConfirmIntention(intention.id)}
+                          disabled={submitting}
+                        >
+                          {submitting ? '确认中...' : '确认此意向'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="empty-hint">
+                <p>暂无传承意向，可点击右上角按钮提出第一版去向方案</p>
+              </div>
+            )}
+          </div>
+
+          <div className="info-section">
+            <div className="section-header">
+              <h3 className="section-title">💬 家庭讨论</h3>
+              <span className="discussion-count-badge">
+                共 {item.discussions?.length || 0} 条
+              </span>
+            </div>
+
+            <div className="discussion-filter-bar">
+              <div className="discussion-filter-item">
+                <label>发言人：</label>
+                <select
+                  className="filter-select-sm"
+                  value={filterAuthor}
+                  onChange={(e) => setFilterAuthor(e.target.value)}
+                >
+                  <option value="">全部</option>
+                  {allAuthors.map((author) => (
+                    <option key={author} value={author}>
+                      {author}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="discussion-filter-item grow">
+                <label>关键词：</label>
+                <input
+                  type="text"
+                  className="filter-input-sm"
+                  placeholder="搜索讨论内容..."
+                  value={filterKeyword}
+                  onChange={(e) => setFilterKeyword(e.target.value)}
+                />
+              </div>
+              {hasActiveDiscussionFilter && (
+                <button
+                  className="clear-filter-sm"
+                  onClick={() => {
+                    setFilterAuthor('')
+                    setFilterKeyword('')
+                  }}
+                >
+                  清除
+                </button>
+              )}
+            </div>
+
+            {displayedDiscussions.length > 0 ? (
+              <div className="discussion-list-inline">
+                {displayedDiscussions.map((discussion) => {
+                  const isSystemConfirm = discussion.content.startsWith('【传承意向已确认】')
+                  return (
+                    <div
+                      key={discussion.id}
+                      className={`discussion-inline-item ${isSystemConfirm ? 'system-msg' : ''}`}
+                    >
+                      <div className="discussion-avatar-inline">
+                        {discussion.author.charAt(0)}
+                      </div>
+                      <div className="discussion-body-inline">
+                        <div className="discussion-header-inline">
+                          <span className="discussion-author-inline">
+                            {discussion.author}
+                          </span>
+                          {isSystemConfirm && (
+                            <span className="system-tag">系统通知</span>
+                          )}
+                          <span className="discussion-time-inline">
+                            {formatDateTime(discussion.created_at)}
+                          </span>
+                        </div>
+                        <p className="discussion-content-inline">
+                          {discussion.content.split('\n').map((line, idx) => (
+                            <span key={idx}>
+                              {line}
+                              {idx < discussion.content.split('\n').length - 1 && <br />}
+                            </span>
+                          ))}
+                        </p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : hasActiveDiscussionFilter ? (
+              <p className="empty-text">未找到符合筛选条件的讨论</p>
+            ) : (
+              <p className="empty-text">暂无讨论，成为第一个发表意见的人吧！</p>
+            )}
+
+            <div className="add-discussion-inline">
+              <div className="discussion-avatar-inline small">我</div>
+              <div className="discussion-input-wrap">
+                <textarea
+                  className="discussion-input-inline"
+                  placeholder="发表你的看法..."
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  rows={3}
+                />
+                <div className="discussion-submit-row">
+                  <button
+                    className="send-discussion-btn"
+                    onClick={handleSubmitComment}
+                    disabled={!newComment.trim() || submittingComment}
+                  >
+                    {submittingComment ? '发表中...' : '发表讨论'}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -393,6 +758,68 @@ function ItemDetailPage() {
                 disabled={submitting}
               >
                 {submitting ? '保存中...' : '保存'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showIntentionModal && (
+        <div className="modal-overlay" onClick={() => setShowIntentionModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2 className="modal-title">
+              提出新去向 - {item.name}（v{getNextVersion()}）
+            </h2>
+            <div className="form-group">
+              <label>提议人 *</label>
+              <input
+                type="text"
+                value={intentionForm.proposed_by}
+                onChange={(e) =>
+                  setIntentionForm({ ...intentionForm, proposed_by: e.target.value })
+                }
+                className="form-input"
+                placeholder="请输入提议人姓名"
+              />
+            </div>
+            <div className="form-group">
+              <label>预期传承人 *</label>
+              <input
+                type="text"
+                value={intentionForm.proposed_recipient}
+                onChange={(e) =>
+                  setIntentionForm({ ...intentionForm, proposed_recipient: e.target.value })
+                }
+                className="form-input"
+                placeholder="请输入预期传承人姓名"
+              />
+            </div>
+            <div className="form-group">
+              <label>传承理由</label>
+              <textarea
+                value={intentionForm.reason}
+                onChange={(e) =>
+                  setIntentionForm({ ...intentionForm, reason: e.target.value })
+                }
+                className="form-textarea"
+                rows={4}
+                placeholder="请说明传承的理由和意义"
+              />
+            </div>
+            <div className="modal-actions">
+              <button
+                className="btn-secondary"
+                onClick={() => setShowIntentionModal(false)}
+                disabled={submitting}
+              >
+                取消
+              </button>
+              <button
+                className="btn-primary"
+                onClick={handleSubmitIntention}
+                disabled={submitting}
+              >
+                {submitting ? '提交中...' : '提交'}
               </button>
             </div>
           </div>

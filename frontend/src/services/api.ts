@@ -8,6 +8,7 @@ import {
   InheritanceIntention,
   Discussion,
   StatisticsResponse,
+  DiscussionFilterParams,
 } from '../types'
 
 const api = axios.create({
@@ -118,8 +119,15 @@ export const intentionsApi = {
 }
 
 export const discussionsApi = {
-  getDiscussions: (itemId: string | number): Promise<Discussion[]> => {
-    return api.get(`/items/${itemId}/discussions`)
+  getAllDiscussions: (params?: DiscussionFilterParams): Promise<Discussion[]> => {
+    return api.get('/discussions', { params })
+  },
+
+  getDiscussions: (
+    itemId: string | number,
+    params?: Omit<DiscussionFilterParams, 'item_id'>
+  ): Promise<Discussion[]> => {
+    return api.get(`/items/${itemId}/discussions`, { params })
   },
 
   addDiscussion: (itemId: string | number, data: Partial<Discussion>): Promise<Discussion> => {

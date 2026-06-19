@@ -202,6 +202,13 @@ class PendingRecipientDistributionItem(BaseModel):
     count: int
 
 
+class ActiveDiscussionItem(BaseModel):
+    id: int
+    name: str
+    discussion_count: int
+    last_discussion_at: Optional[datetime] = None
+
+
 class StatisticsResponse(BaseModel):
     confirmed_inheritance_count: int
     category_distribution: List[CategoryDistributionItem]
@@ -209,3 +216,6 @@ class StatisticsResponse(BaseModel):
     pending_intentions_count: int
     total_items: int
     pending_recipient_distribution: List[PendingRecipientDistributionItem]
+    no_discussion_count: int
+    negotiated_count: int
+    active_discussion_items: List[ActiveDiscussionItem]
