@@ -6,6 +6,7 @@ import StoryCardPage from './pages/StoryCardPage'
 import InheritancePage from './pages/InheritancePage'
 import DiscussionsPage from './pages/DiscussionsPage'
 import StatisticsPage from './pages/StatisticsPage'
+import ExhibitionsPage from './pages/ExhibitionsPage'
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
         <Route path="story-card/:id" element={<StoryCardPage />} />
         <Route path="inheritance" element={<InheritancePage />} />
         <Route path="discussions" element={<DiscussionsPage />} />
+        <Route path="exhibitions" element={<ExhibitionsPage />} />
         <Route path="statistics" element={<StatisticsPage />} />
       </Route>
     </Routes>

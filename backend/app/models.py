@@ -62,6 +62,7 @@ class HeirloomItem(Base):
     discussions = relationship("Discussion", back_populates="item", cascade="all, delete-orphan")
     attachments = relationship("ItemAttachment", back_populates="item", cascade="all, delete-orphan")
     inspection_records = relationship("InspectionRecord", back_populates="item", cascade="all, delete-orphan")
+    exhibition_items = relationship("ExhibitionItem", back_populates="item", cascade="all, delete-orphan")
 
 
 class StoryCard(Base):
@@ -204,3 +205,58 @@ class InspectionRecord(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     item = relationship("HeirloomItem", back_populates="inspection_records")
+
+
+EXHIBITION_STATUS_PLANNED = "待开始"
+EXHIBITION_STATUS_ONGOING = "进行中"
+EXHIBITION_STATUS_COMPLETED = "已结束"
+EXHIBITION_STATUS_RETURNED = "已归位"
+
+EXHIBITION_STATUSES = [
+    EXHIBITION_STATUS_PLANNED,
+    EXHIBITION_STATUS_ONGOING,
+    EXHIBITION_STATUS_COMPLETED,
+    EXHIBITION_STATUS_RETURNED,
+]
+
+EXHIBITION_RETURN_LENT = "借出中"
+EXHIBITION_RETURN_RETURNED = "已归位"
+
+EXHIBITION_RETURN_STATUSES = [
+    EXHIBITION_RETURN_LENT,
+    EXHIBITION_RETURN_RETURNED,
+]
+
+
+class ExhibitionPlan(Base):
+    __tablename__ = "exhibition_plans"
+
+    id = Column(Integer, primary_key=True, index=True)
+    theme = Column(String, nullable=False)
+    event_time = Column(String)
+    location = Column(String)
+    planner = Column(String)
+    required_materials = Column(Text)
+    transport_notes = Column(Text)
+    status = Column(String, default=EXHIBITION_STATUS_PLANNED, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    items = relationship("ExhibitionItem", back_populates="exhibition", cascade="all, delete-orphan", order_by="ExhibitionItem.display_order")
+
+
+class ExhibitionItem(Base):
+    __tablename__ = "exhibition_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    exhibition_id = Column(Integer, ForeignKey("exhibition_plans.id"), nullable=False)
+    item_id = Column(Integer, ForeignKey("heirloom_items.id"), nullable=False)
+    display_order = Column(Integer, default=0, nullable=False)
+    narrative_focus = Column(Text)
+    return_status = Column(String, default=EXHIBITION_RETURN_LENT, nullable=False)
+    transport_risk = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    exhibition = relationship("ExhibitionPlan", back_populates="items")
+    item = relationship("HeirloomItem", back_populates="exhibition_items")

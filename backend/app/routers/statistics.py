@@ -307,6 +307,78 @@ def get_statistics(db: Session = Depends(get_db)):
                 is_overdue=is_ov,
             ))
 
+    total_exhibitions = db.query(models.ExhibitionPlan).count()
+
+    pending_return_item_count = (
+        db.query(models.ExhibitionItem.item_id)
+        .filter(models.ExhibitionItem.return_status == models.EXHIBITION_RETURN_LENT)
+        .distinct()
+        .count()
+    )
+
+    participation_query = (
+        db.query(
+            models.HeirloomItem.id,
+            models.HeirloomItem.name,
+            models.HeirloomItem.cover_image,
+            func.count(models.ExhibitionItem.id).label('count'),
+        )
+        .join(
+            models.ExhibitionItem,
+            models.HeirloomItem.id == models.ExhibitionItem.item_id,
+        )
+        .group_by(
+            models.HeirloomItem.id,
+            models.HeirloomItem.name,
+            models.HeirloomItem.cover_image,
+        )
+        .order_by(desc('count'))
+        .limit(5)
+        .all()
+    )
+    top_exhibition_items = []
+    for item_id, name, cover_image, cnt in participation_query:
+        top_exhibition_items.append(schemas.TopExhibitionItem(
+            id=item_id,
+            name=name,
+            cover_image=cover_image,
+            count=cnt,
+        ))
+
+    status_query = (
+        db.query(
+            models.ExhibitionPlan.status,
+            func.count(models.ExhibitionPlan.id).label('count'),
+        )
+        .group_by(models.ExhibitionPlan.status)
+        .all()
+    )
+    status_count_map = {st: c for st, c in status_query}
+    exhibition_status_distribution = []
+    for ex_status in models.EXHIBITION_STATUSES:
+        c = status_count_map.get(ex_status, 0)
+        pct = round((c / total_exhibitions * 100), 1) if total_exhibitions > 0 else 0
+        if c > 0:
+            exhibition_status_distribution.append(schemas.ExhibitionStatusDistributionItem(
+                status=ex_status,
+                count=c,
+                percentage=pct,
+            ))
+
+    ninety_days_ago = today - timedelta(days=90)
+    all_exhibitions = db.query(models.ExhibitionPlan).all()
+    recent_90days_exhibition_count = 0
+    for plan in all_exhibitions:
+        ref_date_str = plan.event_time
+        if not ref_date_str:
+            continue
+        try:
+            ref_date = datetime.strptime(ref_date_str, "%Y-%m-%d").date()
+            if ref_date >= ninety_days_ago:
+                recent_90days_exhibition_count += 1
+        except (ValueError, TypeError):
+            pass
+
     return schemas.StatisticsResponse(
         confirmed_inheritance_count=confirmed_count,
         category_distribution=category_distribution,
@@ -329,4 +401,9 @@ def get_statistics(db: Session = Depends(get_db)):
         recent_30days_inspection_count=recent_30days_inspection_count,
         inspection_risk_type_distribution=inspection_risk_type_distribution,
         high_risk_items=high_risk_items,
+        total_exhibitions=total_exhibitions,
+        pending_return_item_count=pending_return_item_count,
+        top_exhibition_items=top_exhibition_items,
+        exhibition_status_distribution=exhibition_status_distribution,
+        recent_90days_exhibition_count=recent_90days_exhibition_count,
     )

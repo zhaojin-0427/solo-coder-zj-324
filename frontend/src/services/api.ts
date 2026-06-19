@@ -11,6 +11,11 @@ import {
   StatisticsResponse,
   DiscussionFilterParams,
   InspectionRecord,
+  ExhibitionPlan,
+  ExhibitionPlanCreate,
+  ExhibitionPlanUpdate,
+  ExhibitionFilterParams,
+  ExhibitionItem,
 } from '../types'
 
 const api = axios.create({
@@ -220,6 +225,52 @@ export const inspectionsApi = {
     inspectionId: string | number
   ): Promise<void> => {
     return api.delete(`/items/${itemId}/inspections/${inspectionId}`)
+  },
+}
+
+export const exhibitionsApi = {
+  getExhibitions: (params?: ExhibitionFilterParams): Promise<ExhibitionPlan[]> => {
+    return api.get('/exhibitions', { params })
+  },
+
+  getExhibition: (id: string | number): Promise<ExhibitionPlan> => {
+    return api.get(`/exhibitions/${id}`)
+  },
+
+  createExhibition: (data: ExhibitionPlanCreate): Promise<ExhibitionPlan> => {
+    return api.post('/exhibitions', data)
+  },
+
+  updateExhibition: (
+    id: string | number,
+    data: ExhibitionPlanUpdate
+  ): Promise<ExhibitionPlan> => {
+    return api.put(`/exhibitions/${id}`, data)
+  },
+
+  deleteExhibition: (id: string | number): Promise<void> => {
+    return api.delete(`/exhibitions/${id}`)
+  },
+
+  reorderItems: (
+    planId: string | number,
+    orderedItemIds: (string | number)[]
+  ): Promise<ExhibitionPlan> => {
+    return api.put(`/exhibitions/${planId}/items/reorder`, {
+      ordered_item_ids: orderedItemIds,
+    })
+  },
+
+  updateExhibitionItem: (
+    planId: string | number,
+    itemId: string | number,
+    data: Partial<ExhibitionItem>
+  ): Promise<ExhibitionItem> => {
+    return api.put(`/exhibitions/${planId}/items/${itemId}`, data)
+  },
+
+  getItemExhibitions: (itemId: string | number): Promise<ExhibitionPlan[]> => {
+    return api.get(`/items/${itemId}/exhibitions`)
   },
 }
 

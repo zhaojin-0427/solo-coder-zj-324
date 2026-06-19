@@ -2,8 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base, SessionLocal
 from . import models
-from .routers import items, story_cards, inheritance, discussions, statistics, attachments, inspections
-from .models import FamilyMember, HeirloomItem, StoryCard, RepairRecord, StorageLocation, InheritanceIntention, Discussion, ItemAttachment, InspectionRecord
+from .routers import items, story_cards, inheritance, discussions, statistics, attachments, inspections, exhibitions
+from .models import FamilyMember, HeirloomItem, StoryCard, RepairRecord, StorageLocation, InheritanceIntention, Discussion, ItemAttachment, InspectionRecord, ExhibitionPlan, ExhibitionItem
 
 Base.metadata.create_all(bind=engine)
 
@@ -24,6 +24,7 @@ app.include_router(discussions.router, prefix="/api", tags=["discussions"])
 app.include_router(statistics.router, prefix="/api", tags=["statistics"])
 app.include_router(attachments.router, prefix="/api", tags=["attachments"])
 app.include_router(inspections.router, prefix="/api", tags=["inspections"])
+app.include_router(exhibitions.router, prefix="/api", tags=["exhibitions"])
 
 
 def init_seed_data():
@@ -413,11 +414,112 @@ def init_inspection_seed_data():
         db.close()
 
 
+def init_exhibition_seed_data():
+    db = SessionLocal()
+    try:
+        if db.query(ExhibitionPlan).count() > 0:
+            return
+
+        items_list = db.query(HeirloomItem).order_by(HeirloomItem.id).all()
+        if not items_list:
+            return
+
+        by_name = {item.name: item for item in items_list}
+
+        def item_id(name):
+            it = by_name.get(name)
+            return it.id if it else None
+
+        plans_data = [
+            {
+                "theme": "奶奶八十大寿家族旧物展",
+                "event_time": "2026-06-15",
+                "location": "老家客厅博古架",
+                "planner": "爸爸",
+                "required_materials": "展签卡、绒布衬垫、防潮箱、聚光灯、签到本",
+                "transport_notes": "瓷瓶需双手捧底座移动，禁止拎颈部；首饰盒轻拿轻放避免磕碰。",
+                "status": "进行中",
+                "items": [
+                    {"name": "青花瓷瓶", "narrative_focus": "陪嫁来历与家族福气寓意", "return_status": "已归位", "transport_risk": True},
+                    {"name": "银质首饰盒", "narrative_focus": "曾祖母传下的首饰收纳故事", "return_status": "借出中", "transport_risk": True},
+                    {"name": "老照片集", "narrative_focus": "寿宴现场翻阅老照片回忆", "return_status": "借出中", "transport_risk": False},
+                ],
+            },
+            {
+                "theme": "春节家族记忆展",
+                "event_time": "2026-04-20",
+                "location": "老宅堂屋",
+                "planner": "妈妈",
+                "required_materials": "展板、相框、讲解话筒、年画背景布",
+                "transport_notes": "怀表需放入绒布盒携带，避免剧烈震动。",
+                "status": "已结束",
+                "items": [
+                    {"name": "老式怀表", "narrative_focus": "爷爷年轻时随身怀表的故事", "return_status": "已归位", "transport_risk": False},
+                    {"name": "老照片集", "narrative_focus": "历年春节全家福回顾", "return_status": "已归位", "transport_risk": False},
+                ],
+            },
+            {
+                "theme": "红木家具保养分享展",
+                "event_time": "2025-10-01",
+                "location": "爷爷书房",
+                "planner": "爷爷",
+                "required_materials": "保养蜡、软布、榫卯结构图示",
+                "transport_notes": "椅子就地保养，无需搬运，注意防倾倒。",
+                "status": "已归位",
+                "items": [
+                    {"name": "红木椅子", "narrative_focus": "爷爷亲手打造与榫卯工艺", "return_status": "已归位", "transport_risk": False},
+                ],
+            },
+            {
+                "theme": "中秋家庭聚会展陈",
+                "event_time": "2026-09-12",
+                "location": "老家客厅",
+                "planner": "小红",
+                "required_materials": "展架、防尘罩、月饼主题背景、录音笔",
+                "transport_notes": "瓷瓶提前一天入位，避免当日匆忙搬运；建议佩戴棉手套。",
+                "status": "待开始",
+                "items": [
+                    {"name": "青花瓷瓶", "narrative_focus": "中秋团圆与瓷瓶传承寓意", "return_status": "借出中", "transport_risk": True},
+                ],
+            },
+        ]
+
+        for plan_data in plans_data:
+            plan = ExhibitionPlan(
+                theme=plan_data["theme"],
+                event_time=plan_data["event_time"],
+                location=plan_data["location"],
+                planner=plan_data["planner"],
+                required_materials=plan_data["required_materials"],
+                transport_notes=plan_data["transport_notes"],
+                status=plan_data["status"],
+            )
+            db.add(plan)
+            db.flush()
+            for index, item_data in enumerate(plan_data["items"]):
+                iid = item_id(item_data["name"])
+                if iid is None:
+                    continue
+                db.add(ExhibitionItem(
+                    exhibition_id=plan.id,
+                    item_id=iid,
+                    display_order=index,
+                    narrative_focus=item_data["narrative_focus"],
+                    return_status=item_data["return_status"],
+                    transport_risk=item_data["transport_risk"],
+                ))
+
+        db.commit()
+    finally:
+        db.close()
+
+
 @app.on_event("startup")
 async def startup_event():
     init_seed_data()
     init_attachment_seed_data()
     init_inspection_seed_data()
+    init_exhibition_seed_data()
 
 
 @app.get("/")

@@ -5,6 +5,7 @@ const navItems = [
   { path: '/items', label: '旧物档案', icon: '📦' },
   { path: '/inheritance', label: '传承意向', icon: '📜' },
   { path: '/discussions', label: '家庭讨论', icon: '💬' },
+  { path: '/exhibitions', label: '展陈策划', icon: '🖼️' },
   { path: '/statistics', label: '统计概览', icon: '📊' },
 ]
 

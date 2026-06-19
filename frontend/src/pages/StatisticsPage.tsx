@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { statisticsApi } from '../services/api'
-import { StatisticsResponse, ATTACHMENT_TYPE_META, INSPECTION_RISK_META } from '../types'
+import { StatisticsResponse, ATTACHMENT_TYPE_META, INSPECTION_RISK_META, EXHIBITION_STATUS_META } from '../types'
 import './StatisticsPage.css'
 
 const RECIPIENT_COLORS = [
@@ -204,6 +204,27 @@ function StatisticsPage() {
           <div className="overview-info">
             <span className="overview-number">{stats.recent_30days_inspection_count}</span>
             <span className="overview-label">近30天盘点次数</span>
+          </div>
+        </div>
+        <div className="overview-card">
+          <div className="overview-icon">🖼️</div>
+          <div className="overview-info">
+            <span className="overview-number negotiated">{stats.total_exhibitions}</span>
+            <span className="overview-label">展陈方案总数</span>
+          </div>
+        </div>
+        <div className="overview-card">
+          <div className="overview-icon">📤</div>
+          <div className="overview-info">
+            <span className="overview-number pending">{stats.pending_return_item_count}</span>
+            <span className="overview-label">待归位旧物数</span>
+          </div>
+        </div>
+        <div className="overview-card">
+          <div className="overview-icon">📅</div>
+          <div className="overview-info">
+            <span className="overview-number confirmed">{stats.recent_90days_exhibition_count}</span>
+            <span className="overview-label">近90天展陈活动</span>
           </div>
         </div>
       </div>
@@ -509,6 +530,104 @@ function StatisticsPage() {
           ) : (
             <div className="empty-state small-padding">
               <p>暂无高风险旧物</p>
+            </div>
+          )}
+        </div>
+
+        <div className="chart-card full-width">
+          <h3 className="chart-title">🖼️ 参与展陈次数最多旧物排行 TOP 5</h3>
+          {stats.top_exhibition_items.length > 0 ? (
+            <div className="active-chart">
+              {stats.top_exhibition_items.map((item, index) => {
+                const maxExhibitionCount = Math.max(
+                  ...stats.top_exhibition_items.map((i) => i.count),
+                  1
+                )
+                return (
+                  <div key={String(item.id)} className="active-row">
+                    <span
+                      className="active-rank"
+                      style={{
+                        backgroundColor:
+                          index === 0
+                            ? '#8b6914'
+                            : index < 3
+                            ? '#c8942e'
+                            : '#d0c0a8',
+                        color: '#fff9f0',
+                      }}
+                    >
+                      {index + 1}
+                    </span>
+                    <Link to={`/items/${item.id}`} className="active-name">
+                      📦 {item.name}
+                    </Link>
+                    <div className="active-bar-container">
+                      <div
+                        className="active-bar"
+                        style={{
+                          width: `${(item.count / maxExhibitionCount) * 100}%`,
+                          backgroundColor: '#8b6914',
+                        }}
+                      ></div>
+                    </div>
+                    <span className="active-count">{item.count} 次</span>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="empty-state small-padding">
+              <p>暂无展陈参与记录</p>
+            </div>
+          )}
+        </div>
+
+        <div className="chart-card">
+          <h3 className="chart-title">🏷️ 展陈状态占比</h3>
+          {stats.exhibition_status_distribution.length > 0 ? (
+            <div className="category-chart">
+              {stats.exhibition_status_distribution.map((item) => {
+                const meta = EXHIBITION_STATUS_META[item.status] || {
+                  icon: '🏷️',
+                  color: '#a08060',
+                }
+                const totalExhibitions = stats.exhibition_status_distribution.reduce(
+                  (s, r) => s + r.count,
+                  0
+                )
+                const pct =
+                  totalExhibitions > 0
+                    ? Math.round((item.count / totalExhibitions) * 100)
+                    : 0
+                const maxStatusCount = Math.max(
+                  ...stats.exhibition_status_distribution.map((r) => r.count),
+                  1
+                )
+                return (
+                  <div key={item.status} className="category-row">
+                    <span className="category-name">
+                      {meta.icon} {item.status}
+                    </span>
+                    <div className="category-bar-container">
+                      <div
+                        className="category-bar"
+                        style={{
+                          width: `${(item.count / maxStatusCount) * 100}%`,
+                          backgroundColor: meta.color,
+                        }}
+                      ></div>
+                    </div>
+                    <span className="category-count">
+                      {item.count} · {pct}%
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="empty-state small-padding">
+              <p>暂无展陈方案</p>
             </div>
           )}
         </div>

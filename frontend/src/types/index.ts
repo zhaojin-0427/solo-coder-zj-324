@@ -228,10 +228,108 @@ export interface StatisticsResponse {
   recent_30days_inspection_count: number
   inspection_risk_type_distribution: InspectionRiskTypeItem[]
   high_risk_items: HighRiskItem[]
+  total_exhibitions: number
+  pending_return_item_count: number
+  top_exhibition_items: TopExhibitionItem[]
+  exhibition_status_distribution: ExhibitionStatusDistributionItem[]
+  recent_90days_exhibition_count: number
 }
 
 export interface DiscussionFilterParams {
   item_id?: string | number;
   author?: string;
   keyword?: string;
+}
+
+export const EXHIBITION_STATUSES = ['待开始', '进行中', '已结束', '已归位'] as const
+
+export const EXHIBITION_STATUS_META: Record<string, { icon: string; color: string }> = {
+  待开始: { icon: '🗓️', color: '#6b8cae' },
+  进行中: { icon: '🎬', color: '#c8942e' },
+  已结束: { icon: '📦', color: '#a08060' },
+  已归位: { icon: '✅', color: '#5a8f5a' },
+}
+
+export const EXHIBITION_RETURN_STATUSES = ['借出中', '已归位'] as const
+
+export const EXHIBITION_RETURN_META: Record<string, { icon: string; color: string }> = {
+  借出中: { icon: '📤', color: '#c25a3a' },
+  已归位: { icon: '✅', color: '#5a8f5a' },
+}
+
+export interface ExhibitionItemRef {
+  id: string | number
+  name: string
+  category: string
+  era?: string
+  cover_image?: string
+  condition?: string
+}
+
+export interface ExhibitionItem {
+  id: string | number
+  exhibition_id: string | number
+  item_id: string | number
+  display_order: number
+  narrative_focus?: string
+  return_status: string
+  transport_risk: boolean
+  item?: ExhibitionItemRef
+  created_at?: string
+  updated_at?: string
+}
+
+export interface ExhibitionItemCreate {
+  item_id: string | number
+  narrative_focus?: string
+  return_status: string
+  transport_risk: boolean
+}
+
+export interface ExhibitionPlan {
+  id: string | number
+  theme: string
+  event_time?: string
+  location?: string
+  planner?: string
+  required_materials?: string
+  transport_notes?: string
+  status: string
+  created_at?: string
+  updated_at?: string
+  items: ExhibitionItem[]
+}
+
+export interface ExhibitionPlanCreate {
+  theme: string
+  event_time?: string
+  location?: string
+  planner?: string
+  required_materials?: string
+  transport_notes?: string
+  status: string
+  items: ExhibitionItemCreate[]
+}
+
+export type ExhibitionPlanUpdate = Partial<ExhibitionPlanCreate>
+
+export interface ExhibitionFilterParams {
+  status?: string
+  location?: string
+  theme?: string
+  start_date?: string
+  end_date?: string
+}
+
+export interface TopExhibitionItem {
+  id: string | number
+  name: string
+  cover_image?: string
+  count: number
+}
+
+export interface ExhibitionStatusDistributionItem {
+  status: string
+  count: number
+  percentage?: number
 }

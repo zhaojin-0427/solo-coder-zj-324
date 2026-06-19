@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { itemsApi, repairRecordsApi, storageApi, intentionsApi, discussionsApi, attachmentsApi, inspectionsApi } from '../services/api'
+import { itemsApi, repairRecordsApi, storageApi, intentionsApi, discussionsApi, attachmentsApi, inspectionsApi, exhibitionsApi } from '../services/api'
 import {
   HeirloomItem,
   RepairRecord,
@@ -13,6 +13,10 @@ import {
   InspectionRecord,
   INSPECTION_RISK_TYPES,
   INSPECTION_RISK_META,
+  ExhibitionPlan,
+  EXHIBITION_STATUS_META,
+  EXHIBITION_RETURN_STATUSES,
+  EXHIBITION_RETURN_META,
 } from '../types'
 import './ItemDetailPage.css'
 
@@ -122,6 +126,7 @@ function ItemDetailPage() {
 
   const [showInspectionModal, setShowInspectionModal] = useState(false)
   const [editingInspection, setEditingInspection] = useState<InspectionRecord | null>(null)
+  const [exhibitions, setExhibitions] = useState<ExhibitionPlan[]>([])
   const [inspectionForm, setInspectionForm] = useState<Partial<InspectionRecord>>({
     inspection_date: new Date().toISOString().split('T')[0],
     inspector: '',
@@ -143,6 +148,12 @@ function ItemDetailPage() {
         setError(null)
         const data = await itemsApi.getItem(id)
         setItem(data)
+        try {
+          const exData = await exhibitionsApi.getItemExhibitions(id)
+          setExhibitions(exData)
+        } catch {
+          setExhibitions([])
+        }
       } catch (err: any) {
         setError(err.message || '加载旧物详情失败')
       } finally {
@@ -1140,6 +1151,117 @@ function ItemDetailPage() {
               </div>
             </div>
           )}
+
+          <div className="info-section exhibition-records-section">
+            <div className="section-header">
+              <h3 className="section-title">🖼️ 展陈记录</h3>
+              <Link to="/exhibitions" className="read-more">
+                前往展陈策划 →
+              </Link>
+            </div>
+            {exhibitions.length === 0 ? (
+              <p className="empty-text">该旧物暂未参与任何展陈方案</p>
+            ) : (
+              (() => {
+                const entries = exhibitions.map((p) => ({
+                  plan: p,
+                  ei: p.items.find((e) => String(e.item_id) === String(id)),
+                }))
+                const unreturned = entries.filter(
+                  (e) => e.ei?.return_status === EXHIBITION_RETURN_STATUSES[0]
+                )
+                const riskPlans = entries.filter((e) => e.ei?.transport_risk)
+                return (
+                  <>
+                    {(unreturned.length > 0 || riskPlans.length > 0) && (
+                      <div className="exhibition-alerts">
+                        {unreturned.length > 0 && (
+                          <div className="exhibition-alert alert-warn">
+                            <span className="alert-icon">⚠️</span>
+                            <span className="alert-text">
+                              尚未归位：该旧物在
+                              {unreturned.map((e, i) => (
+                                <span key={String(e.plan.id)}>
+                                  「{e.plan.theme}」
+                                  {i < unreturned.length - 1 ? '、' : ''}
+                                </span>
+                              ))}
+                              中仍处于借出状态，请尽快确认归位。
+                            </span>
+                          </div>
+                        )}
+                        {riskPlans.length > 0 && (
+                          <div className="exhibition-alert alert-risk">
+                            <span className="alert-icon">🚚</span>
+                            <span className="alert-text">
+                              存在搬运风险：该旧物在
+                              {riskPlans.map((e, i) => (
+                                <span key={String(e.plan.id)}>
+                                  「{e.plan.theme}」
+                                  {i < riskPlans.length - 1 ? '、' : ''}
+                                </span>
+                              ))}
+                              中标记为搬运风险，借出/搬运时需特别注意。
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <div className="exhibition-record-list">
+                      {entries.map(({ plan, ei }) => {
+                        const meta = EXHIBITION_STATUS_META[plan.status] || {}
+                        const returnMeta =
+                          EXHIBITION_RETURN_META[ei?.return_status || ''] ||
+                          { icon: '', color: '#a08060' }
+                        return (
+                          <div key={String(plan.id)} className="exhibition-record-card">
+                            <div className="erc-head">
+                              <span className="erc-theme">{plan.theme}</span>
+                              <span
+                                className="erc-status"
+                                style={{
+                                  backgroundColor: meta.color ? `${meta.color}22` : '#f0e6d6',
+                                  color: meta.color || '#8b6914',
+                                }}
+                              >
+                                {meta.icon} {plan.status}
+                              </span>
+                            </div>
+                            <div className="erc-meta">
+                              <span>📅 {plan.event_time || '待定'}</span>
+                              <span>📍 {plan.location || '待定'}</span>
+                              {plan.planner && <span>👤 {plan.planner}</span>}
+                            </div>
+                            {ei && (
+                              <div className="erc-item-info">
+                                <span
+                                  className="erc-return"
+                                  style={{
+                                    backgroundColor: `${returnMeta.color}22`,
+                                    color: returnMeta.color,
+                                  }}
+                                >
+                                  {returnMeta.icon} {ei.return_status}
+                                </span>
+                                {ei.transport_risk && (
+                                  <span className="erc-risk">⚠ 搬运风险</span>
+                                )}
+                                {ei.narrative_focus && (
+                                  <span className="erc-narrative">
+                                    讲述重点：{ei.narrative_focus}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </>
+                )
+              })()
+            )}
+          </div>
         </div>
       </div>
 

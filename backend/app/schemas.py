@@ -261,11 +261,90 @@ class HeirloomItem(HeirloomItemBase):
         from_attributes = True
 
 
+class ExhibitionItemRef(BaseModel):
+    id: int
+    name: str
+    category: str
+    era: Optional[str] = None
+    cover_image: Optional[str] = None
+    condition: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ExhibitionItemBase(BaseModel):
+    item_id: int
+    narrative_focus: Optional[str] = None
+    return_status: str = "借出中"
+    transport_risk: bool = False
+
+
+class ExhibitionItemCreate(ExhibitionItemBase):
+    pass
+
+
+class ExhibitionItem(ExhibitionItemBase):
+    id: int
+    exhibition_id: int
+    display_order: int
+    item: Optional[ExhibitionItemRef] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ExhibitionPlanBase(BaseModel):
+    theme: str
+    event_time: Optional[str] = None
+    location: Optional[str] = None
+    planner: Optional[str] = None
+    required_materials: Optional[str] = None
+    transport_notes: Optional[str] = None
+    status: str = "待开始"
+
+
+class ExhibitionPlanCreate(ExhibitionPlanBase):
+    items: List[ExhibitionItemCreate] = []
+
+
+class ExhibitionPlanUpdate(BaseModel):
+    theme: Optional[str] = None
+    event_time: Optional[str] = None
+    location: Optional[str] = None
+    planner: Optional[str] = None
+    required_materials: Optional[str] = None
+    transport_notes: Optional[str] = None
+    status: Optional[str] = None
+    items: Optional[List[ExhibitionItemCreate]] = None
+
+
+class ExhibitionPlan(ExhibitionPlanBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    items: List[ExhibitionItem] = []
+
+    class Config:
+        from_attributes = True
+
+
+class ExhibitionReorderRequest(BaseModel):
+    ordered_item_ids: List[int] = []
+
+
+class ExhibitionItemUpdate(BaseModel):
+    narrative_focus: Optional[str] = None
+    return_status: Optional[str] = None
+    transport_risk: Optional[bool] = None
+
+
 class CategoryDistributionItem(BaseModel):
     category: str
     count: int
     percentage: float
-
 
 class TopRelatedFamilyMember(BaseModel):
     id: int
@@ -312,6 +391,19 @@ class HighRiskItem(BaseModel):
     is_overdue: bool = False
 
 
+class TopExhibitionItem(BaseModel):
+    id: int
+    name: str
+    cover_image: Optional[str] = None
+    count: int
+
+
+class ExhibitionStatusDistributionItem(BaseModel):
+    status: str
+    count: int
+    percentage: float
+
+
 class StatisticsResponse(BaseModel):
     confirmed_inheritance_count: int
     category_distribution: List[CategoryDistributionItem]
@@ -334,3 +426,8 @@ class StatisticsResponse(BaseModel):
     recent_30days_inspection_count: int = 0
     inspection_risk_type_distribution: List[InspectionRiskTypeItem] = []
     high_risk_items: List[HighRiskItem] = []
+    total_exhibitions: int = 0
+    pending_return_item_count: int = 0
+    top_exhibition_items: List[TopExhibitionItem] = []
+    exhibition_status_distribution: List[ExhibitionStatusDistributionItem] = []
+    recent_90days_exhibition_count: int = 0
